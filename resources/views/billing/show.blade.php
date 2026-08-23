@@ -1,0 +1,140 @@
+@extends('layouts.app')
+
+@section('content')
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <a href="{{ route('billing.index') }}" class="text-decoration-none">
+                <i class="bi bi-arrow-left"></i> Comprobantes
+            </a>
+            <h2 class="fw-bold mb-0 mt-2">
+                {{ $order->document_type }} {{ $order->full_number }}
+                @php
+                    $color = match($order->sunat_status) {
+                        'ACCEPTED' => 'success',
+                        'OBSERVED' => 'warning',
+                        'PENDING'  => 'secondary',
+                        'VOIDED'   => 'dark',
+                        default    => 'danger',
+                    };
+                @endphp
+                <span class="badge bg-{{ $color }} ms-2">{{ $order->sunat_status }}</span>
+            </h2>
+        </div>
+        <div class="btn-group">
+            <a href="{{ route('billing.pdf', $order) }}" target="_blank" class="btn btn-danger">
+                <i class="bi bi-file-pdf"></i> PDF A4
+            </a>
+            <a href="{{ route('billing.pdf.ticket', $order) }}" target="_blank" class="btn btn-outline-danger">
+                <i class="bi bi-receipt"></i> Ticket 80mm
+            </a>
+            @if($order->xml_path)
+                <a href="{{ route('billing.xml', $order) }}" class="btn btn-outline-info">
+                    <i class="bi bi-filetype-xml"></i> XML
+                </a>
+            @endif
+            @if($order->cdr_path)
+                <a href="{{ route('billing.cdr', $order) }}" class="btn btn-outline-success">
+                    <i class="bi bi-archive"></i> CDR
+                </a>
+            @endif
+            @if(in_array($order->sunat_status, ['PENDING','ERROR','REJECTED']))
+                <form method="POST" action="{{ route('billing.retry', $order) }}" class="d-inline">
+                    @csrf
+                    <button class="btn btn-warning" onclick="return confirm('¿Reintentar envío a SUNAT?')">
+                        <i class="bi bi-arrow-repeat"></i> Reintentar
+                    </button>
+                </form>
+            @endif
+            @if($order->sunat_status === 'ACCEPTED')
+                <a href="{{ route('credit_notes.create', $order) }}" class="btn btn-outline-warning">
+                    <i class="bi bi-arrow-counterclockwise"></i> Emitir N.C.
+                </a>
+            @endif
+        </div>
+    </div>
+
+    @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
+    @if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
+
+    <div class="row g-3">
+        <div class="col-md-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white"><strong>Detalle del Comprobante</strong></div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Cant</th><th>Producto</th>
+                                <th class="text-end">Precio</th>
+                                <th class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($order->details as $d)
+                                <tr>
+                                    <td>{{ $d->quantity }}</td>
+                                    <td>{{ $d->product->name ?? '—' }}</td>
+                                    <td class="text-end">S/ {{ number_format($d->price, 2) }}</td>
+                                    <td class="text-end">S/ {{ number_format($d->price * $d->quantity, 2) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot>
+                            <tr><th colspan="3" class="text-end">Op. Gravada:</th>
+                                <td class="text-end">S/ {{ number_format($order->total_gravada, 2) }}</td></tr>
+                            <tr><th colspan="3" class="text-end">IGV (18%):</th>
+                                <td class="text-end">S/ {{ number_format($order->igv, 2) }}</td></tr>
+                            <tr class="table-success">
+                                <th colspan="3" class="text-end">TOTAL:</th>
+                                <th class="text-end">S/ {{ number_format($order->total, 2) }}</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            @if($order->creditNotes->isNotEmpty())
+                <div class="card border-0 shadow-sm mt-3">
+                    <div class="card-header bg-white"><strong>Notas de Crédito asociadas</strong></div>
+                    <ul class="list-group list-group-flush">
+                        @foreach($order->creditNotes as $cn)
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <a href="{{ route('credit_notes.show', $cn) }}" class="fw-bold">{{ $cn->full_number }}</a>
+                                    <span class="text-muted small">— [{{ $cn->reason_code }}] {{ $cn->reason_description }}</span>
+                                </div>
+                                <span class="badge bg-{{ $cn->sunat_status === 'ACCEPTED' ? 'success' : 'danger' }}">{{ $cn->sunat_status }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+        </div>
+
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white"><strong>Datos del Cliente</strong></div>
+                <div class="card-body small">
+                    <div><strong>Nombre:</strong> {{ $order->client_name }}</div>
+                    <div><strong>Documento:</strong> {{ $order->client_document }}</div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-white"><strong>Trazabilidad SUNAT</strong></div>
+                <div class="card-body small">
+                    <div><strong>Estado:</strong> <span class="badge bg-{{ $color }}">{{ $order->sunat_status }}</span></div>
+                    <div><strong>Código:</strong> {{ $order->sunat_code ?? '—' }}</div>
+                    <div><strong>Descripción:</strong> {{ $order->sunat_description ?? '—' }}</div>
+                    <div><strong>Hash:</strong> <code>{{ $order->hash ?? '—' }}</code></div>
+                    <div><strong>Enviado:</strong> {{ $order->sent_at?->format('d/m/Y H:i:s') ?? '—' }}</div>
+                    <div class="mt-2"><strong>XML:</strong> <code class="small">{{ $order->xml_path ?? '—' }}</code></div>
+                    <div><strong>CDR:</strong> <code class="small">{{ $order->cdr_path ?? '—' }}</code></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection

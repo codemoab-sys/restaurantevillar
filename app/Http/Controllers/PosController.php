@@ -1,0 +1,482 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Area;
+use App\Models\Table;
+use App\Models\Category;
+use App\Models\Product;
+use App\Models\Order;
+use App\Models\OrderDetail;
+use App\Models\InventoryLog;
+use App\Models\Client;
+use App\Models\Setting;
+use App\Models\DocumentSeries;
+use App\Services\Sunat\SunatConfig;
+use App\Services\Sunat\SunatService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
+
+class PosController extends Controller
+{
+    public function index()
+    {
+        $areas = Area::with(['tables' => function($q) {
+            $q->with(['orders' => function($q) {
+                $q->where('status', 'pending');
+            }, 'reservations' => function($q) {
+                $q->where('status', 'confirmed')
+                  ->whereDate('reservation_time', Carbon::today())
+                  ->where('reservation_time', '>=', Carbon::now()->subHours(2)) 
+                  ->orderBy('reservation_time', 'asc');
+            }]);
+        }])->get();
+        
+        $currency = Setting::where('key', 'currency_symbol')->value('value') ?? 'S/';
+
+        // Últimas 5 ventas para el panel de "Últimas Ventas"
+        $lastSales = Order::where('status', 'completed')
+            ->with('client')
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get();
+
+        return view('pos.index', compact('areas', 'currency', 'lastSales'));
+    }
+
+    public function order(Table $table)
+    {
+        // Stock reservado en órdenes pendientes de MESAS (no delivery)
+        $reservedMap = DB::table('rest_order_details')
+            ->join('rest_orders', 'rest_orders.id', '=', 'rest_order_details.order_id')
+            ->where('rest_orders.status', 'pending')
+            ->whereNotNull('rest_orders.table_id')
+            ->select('rest_order_details.product_id', DB::raw('SUM(rest_order_details.quantity) as reserved'))
+            ->groupBy('rest_order_details.product_id')
+            ->pluck('reserved', 'product_id');
+
+        // Filtro: Solo productos activos y vendibles con stock base
+        $categories = Category::with(['products' => function($q) {
+            $q->where('is_active', true)
+              ->where('is_saleable', true)
+              ->where(fn($q2) => $q2->where('stock', '>', 0)->orWhereNull('stock'));
+        }])->where('is_active', true)->get();
+
+        // Ocultar productos sin stock disponible (descontando reservas)
+        $categories->each(function($category) use ($reservedMap) {
+            $category->products = $category->products->filter(function($product) use ($reservedMap) {
+                if (is_null($product->stock)) return true;
+                $reserved = $reservedMap->get($product->id, 0);
+                return ($product->stock - $reserved) > 0;
+            });
+        });
+
+        $order = Order::where('table_id', $table->id)->where('status', 'pending')->with('details.product')->first();
+        $occupiedTableIds = Order::where('status', 'pending')->pluck('table_id');
+        $freeTables = Table::whereNotIn('id', $occupiedTableIds)->where('id', '!=', $table->id)->with('area')->get();
+        $clients = Client::select('id', 'name', 'document_number')->orderBy('name')->get();
+        $currency = Setting::where('key', 'currency_symbol')->value('value') ?? 'S/';
+        $clientsData = $clients->map(fn ($c) => [
+            'id'       => $c->id,
+            'name'     => $c->name,
+            'document' => (string) ($c->document_number ?? ''),
+        ])->values();
+
+        $lastSales = Order::where('status', 'completed')
+            ->with('client')
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get();
+
+        return view('pos.order', compact('table', 'categories', 'order', 'freeTables', 'clients', 'currency', 'lastSales', 'clientsData', 'reservedMap'));
+    }
+
+    // --- AGREGAR POR CLIC (Normal) ---
+    public function addToOrder(Request $request, Table $table)
+    {
+        $product = Product::findOrFail($request->product_id);
+        $error = $this->checkStockAvailability($product, $table);
+        if ($error) {
+            return response()->json(['error' => $error], 422);
+        }
+        
+        $this->addItemToTable($table, $product);
+        return $this->getCartHtml($table);
+    }
+
+    // --- AGREGAR POR CÓDIGO DE BARRAS / BÚSQUEDA (código, nombre o precio) ---
+    public function addByBarcode(Request $request, Table $table)
+    {
+        $request->validate(['barcode' => 'required']);
+
+        $query = trim($request->input('barcode'));
+
+        // 1) Coincidencia exacta por código de barras
+        $product = Product::where('barcode', $query)
+                          ->where('is_active', true)
+                          ->where('is_saleable', true)
+                          ->where(fn($q) => $q->where('stock', '>', 0)->orWhereNull('stock'))
+                          ->first();
+
+        if ($product) {
+            $error = $this->checkStockAvailability($product, $table);
+            if ($error) {
+                return response()->json(['error' => $error], 422);
+            }
+            $this->addItemToTable($table, $product);
+            return $this->getCartHtml($table);
+        }
+
+        // 2) Búsqueda por nombre (parcial)
+        $matches = Product::whereRaw('name COLLATE utf8mb4_general_ci LIKE ?', ['%' . $query . '%'])
+                          ->where('is_active', true)
+                          ->where('is_saleable', true)
+                          ->where(fn($q) => $q->where('stock', '>', 0)->orWhereNull('stock'))
+                          ->limit(10)
+                          ->get();
+
+        if ($matches->count() === 0) {
+            return response()->json(['error' => 'Producto no encontrado'], 404);
+        }
+
+        if ($matches->count() === 1) {
+            $error = $this->checkStockAvailability($matches->first(), $table);
+            if ($error) {
+                return response()->json(['error' => $error], 422);
+            }
+            $this->addItemToTable($table, $matches->first());
+            return $this->getCartHtml($table);
+        }
+
+        return response()->json([
+            'matches' => $matches->map(fn ($p) => [
+                'id'      => $p->id,
+                'name'    => $p->name,
+                'price'   => $p->price,
+                'barcode' => $p->barcode,
+            ]),
+        ]);
+    }
+
+    /**
+     * Verifica si hay stock disponible para un producto.
+     * Descuenta stock reservado en órdenes pendientes de TODAS las mesas.
+     * Retorna string con mensaje de error o null si está OK.
+     */
+    private function checkStockAvailability(Product $product, Table $table): ?string
+    {
+        if (is_null($product->stock)) {
+            return null; // Servicio sin control de stock
+        }
+
+        if ($product->stock <= 0) {
+            return 'Sin stock disponible';
+        }
+
+        // Stock reservado en órdenes pendientes de MESAS (no delivery)
+        $reserved = DB::table('rest_order_details')
+            ->join('rest_orders', 'rest_orders.id', '=', 'rest_order_details.order_id')
+            ->where('rest_orders.status', 'pending')
+            ->whereNotNull('rest_orders.table_id')
+            ->where('rest_order_details.product_id', $product->id)
+            ->sum('rest_order_details.quantity');
+
+        $available = $product->stock - $reserved;
+
+        if ($available <= 0) {
+            return 'Sin stock disponible. Todas las unidades están en otras mesas.';
+        }
+
+        // Verificar si la mesa actual ya tiene el producto y no puede sumar más
+        $order = Order::where('table_id', $table->id)->where('status', 'pending')->first();
+        if ($order) {
+            $detail = $order->details()->where('product_id', $product->id)->first();
+            if ($detail && $detail->quantity >= $available) {
+                return 'Stock insuficiente. Disponible: ' . $available;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Agrega producto al carrito dentro de una transacción.
+     */
+    private function addItemToTable(Table $table, Product $product)
+    {
+        DB::transaction(function() use ($table, $product) {
+            $order = Order::firstOrCreate(
+                ['table_id' => $table->id, 'status' => 'pending'], 
+                ['user_id' => auth()->id() ?? 1, 'total' => 0]
+            );
+
+            $detail = $order->details()->where('product_id', $product->id)->first();
+
+            if ($detail) {
+                $detail->increment('quantity');
+            } else {
+                $order->details()->create([
+                    'product_id' => $product->id, 
+                    'quantity' => 1, 
+                    'price' => $product->price, 
+                    'status' => 'pending'
+                ]);
+            }
+            $this->recalculateTotal($order);
+        });
+    }
+
+    // --- ACTUALIZAR CANTIDAD ---
+    public function updateQuantity(Request $request, OrderDetail $detail)
+    {
+        $newQty = $request->quantity;
+        $order = $detail->order;
+        
+        if ($newQty < 1) { 
+            $detail->delete(); 
+            $this->cleanupEmptyOrder($order);
+        } else {
+            $product = $detail->product;
+            if (!is_null($product->stock)) {
+                $reserved = DB::table('rest_order_details')
+                    ->join('rest_orders', 'rest_orders.id', '=', 'rest_order_details.order_id')
+                    ->where('rest_orders.status', 'pending')
+                    ->whereNotNull('rest_orders.table_id')
+                    ->where('rest_order_details.product_id', $product->id)
+                    ->sum('rest_order_details.quantity');
+                
+                $available = $product->stock - $reserved + $detail->quantity;
+                if ($newQty > $available) {
+                    return response()->json(['error' => 'Stock insuficiente. Disponible: ' . $available], 422);
+                }
+            }
+            $detail->update(['quantity' => $newQty]); 
+        }
+        
+        $this->recalculateTotal($order);
+        return $this->getCartHtml($order->table);
+    }
+
+    // --- ACTUALIZAR NOTA ---
+    public function updateNote(Request $request, OrderDetail $detail) 
+    { 
+        $detail->update(['note' => $request->note]); 
+        return $this->getCartHtml($detail->order->table); 
+    }
+
+    // --- ELIMINAR ITEM ---
+    public function removeItem(OrderDetail $detail) 
+    { 
+        $order = $detail->order; 
+        $detail->delete(); 
+        $this->cleanupEmptyOrder($order);
+        $this->recalculateTotal($order); 
+        return $this->getCartHtml($order->table); 
+    }
+
+    /**
+     * Elimina la orden y libera la mesa si no quedan items.
+     * Reactiva productos que tengan stock disponible.
+     */
+    private function cleanupEmptyOrder(Order $order): void
+    {
+        if ($order->details()->count() === 0) {
+            $tableId = $order->table_id;
+            $order->delete();
+
+            // Reactivar productos que ahora tienen stock
+            Product::where('is_saleable', false)
+                ->where('stock', '>', 0)
+                ->update(['is_saleable' => true]);
+        }
+    }
+
+    // --- APLICAR DESCUENTO (Corregido para devolver HTML) ---
+    public function applyDiscount(Request $request, Order $order) 
+    { 
+        $order->discount = $request->input('discount', 0); 
+        $order->tip = $request->input('tip', 0); 
+        $order->save(); 
+        $this->recalculateTotal($order); 
+        return $this->getCartHtml($order->table); 
+    }
+    
+    public function moveTable(Request $request, Order $order) {
+        $request->validate(['target_table_id' => 'required|exists:tables,id']);
+        if (Order::where('table_id', $request->target_table_id)->where('status', 'pending')->exists()) return redirect()->back()->with('error', 'Ocupada.');
+        $order->table_id = $request->target_table_id; $order->save();
+        return redirect()->route('pos.order', $request->target_table_id);
+    }
+
+    public function getSplitContent(Order $order) { return view('pos.partials.split_content', compact('order')); }
+    public function processSplit(Request $request, Order $order) { return redirect()->back(); }
+    public function precheck(Order $order) { $settings = Setting::pluck('value', 'key')->toArray(); return view('sales.ticket', compact('order', 'settings')); }
+    public function kitchenTicket(Order $order) { return view('sales.kitchen_ticket', compact('order')); }
+
+    public function checkout(Request $request, Order $order)
+    {
+        if($order->status !== 'pending') {
+            return $request->expectsJson()
+                ? response()->json(['success' => false, 'message' => 'Orden cerrada.'], 422)
+                : redirect()->route('pos.index')->with('error', 'Orden cerrada.');
+        }
+
+        $method = $request->input('payment_method', 'cash');
+        $received = $method === 'cash' ? $request->input('received_amount') : $order->total;
+        $change = max(0, $received - $order->total);
+        $clientId = $request->input('client_id');
+        $clientName = $clientId ? Client::find($clientId)->name : ($request->input('client_name') ?? 'Público');
+        $documentType = $request->input('document_type', 'Ticket');
+        $clientDocument = $request->input('client_document');
+
+        // Validación específica para Factura (Perú): requiere RUC (11 dígitos) y razón social
+        if ($documentType === 'Factura') {
+            $doc = preg_replace('/\D/', '', (string) $clientDocument);
+            if (strlen($doc) !== 11) {
+                return $request->expectsJson()
+                    ? response()->json(['success' => false, 'message' => 'Para emitir Factura el cliente debe tener RUC de 11 dígitos.'], 422)
+                    : redirect()->back()->with('error', 'Para emitir Factura el cliente debe tener RUC de 11 dígitos.');
+            }
+            if (empty(trim((string) $clientName)) || $clientName === 'Público') {
+                return $request->expectsJson()
+                    ? response()->json(['success' => false, 'message' => 'Para emitir Factura debe indicar la razón social del cliente.'], 422)
+                    : redirect()->back()->with('error', 'Para emitir Factura debe indicar la razón social del cliente.');
+            }
+        }
+
+        DB::transaction(function() use ($order, $method, $received, $change, $request, $clientId, $clientName, $documentType, $clientDocument) {
+            // 1. Calcular IGV (Perú 18%) si es comprobante electrónico
+            $config = new SunatConfig();
+            $igvFactor = $config->igvFactor();
+            $isElectronic = in_array($documentType, ['Boleta', 'Factura'], true);
+
+            $totalGravada = 0;
+            $igv = 0;
+            if ($isElectronic) {
+                $totalGravada = round((float) $order->total / (1 + $igvFactor), 2);
+                $igv = round((float) $order->total - $totalGravada, 2);
+            }
+
+            // 2. Asignar serie y correlativo si es electrónico
+            $serie = null;
+            $correlativo = null;
+            if ($isElectronic) {
+                $tipo = $documentType === 'Factura' ? 'factura' : 'boleta';
+                $next = DocumentSeries::next($tipo);
+                $serie = $next['serie'];
+                $correlativo = $next['correlativo'];
+            }
+
+            $order->update([
+                'status' => 'completed',
+                'payment_method' => $method,
+                'received_amount' => $received,
+                'change_amount' => $change,
+                'document_type' => $documentType,
+                'client_id' => $clientId,
+                'client_name' => $clientName,
+                'client_document' => $clientDocument,
+                'cash_register_id' => Auth::user()->activeCashRegister->id ?? null,
+
+                // SUNAT
+                'serie' => $serie,
+                'correlativo' => $correlativo,
+                'subtotal' => $totalGravada,
+                'igv' => $igv,
+                'total_gravada' => $totalGravada,
+                'sunat_status' => $isElectronic ? 'PENDING' : 'NA',
+            ]);
+
+            foreach($order->details as $detail) {
+                $product = $detail->product;
+                $ingredients = $product->ingredients;
+
+                if ($ingredients->count() > 0) {
+                    foreach ($ingredients as $ingredient) {
+                        $qtyToDeduct = $ingredient->pivot->quantity * $detail->quantity;
+                        $oldStock = $ingredient->stock;
+                        $ingredient->decrement('stock', $qtyToDeduct);
+                        InventoryLog::create([
+                            'product_id' => $ingredient->id,
+                            'user_id' => Auth::id(),
+                            'type' => 'sale',
+                            'quantity' => -$qtyToDeduct,
+                            'old_stock' => $oldStock,
+                            'new_stock' => $oldStock - $qtyToDeduct,
+                            'note' => 'Venta: ' . $product->name . ' (Orden #' . $order->id . ')'
+                        ]);
+                    }
+                } else {
+                    if (!is_null($product->stock)) {
+                        $oldStock = $product->stock;
+                        $product->decrement('stock', $detail->quantity);
+                        InventoryLog::create([
+                            'product_id' => $product->id,
+                            'user_id' => Auth::id(),
+                            'type' => 'sale',
+                            'quantity' => -($detail->quantity),
+                            'old_stock' => $oldStock,
+                            'new_stock' => $oldStock - $detail->quantity,
+                            'note' => 'Venta POS #' . $order->id
+                        ]);
+                    }
+                }
+            }
+
+            // Desactivar automáticamente productos sin stock
+            foreach ($order->details as $detail) {
+                $product = $detail->product;
+                if (!is_null($product->stock) && $product->stock <= 0) {
+                    $product->update(['is_saleable' => false]);
+                }
+            }
+        });
+
+        // 3. Envío a SUNAT (no bloqueante: si falla queda en ERROR y puede reintentarse desde Billing)
+        if ($order->isElectronic()) {
+            try {
+                (new SunatService())->sendInvoice($order->fresh('details.product'));
+            } catch (\Throwable $e) {
+                Log::error('Error al enviar a SUNAT', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage(),
+                ]);
+                // No interrumpimos la venta; queda PENDING/ERROR para reintento manual.
+            }
+        }
+
+        $msg = 'Venta registrada.';
+        if ($order->isElectronic()) {
+            $order->refresh();
+            $msg .= ' Comprobante ' . $order->full_number . ' - ' . ($order->sunat_description ?? $order->sunat_status);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $msg,
+                'redirect' => route('pos.index'),
+            ]);
+        }
+
+        return redirect()->route('pos.index')->with('success', $msg);
+    }
+
+    private function recalculateTotal(Order $order)
+    {
+        $subtotal = $order->details->sum(fn($d) => $d->price * $d->quantity);
+        $total = ($subtotal - ($order->discount ?? 0)) + ($order->tip ?? 0);
+        $order->update(['total' => max(0, $total)]);
+    }
+
+    private function getCartHtml(Table $table)
+    {
+        $order = Order::where('table_id', $table->id)->where('status', 'pending')->with('details.product')->first();
+        $clients = Client::select('id', 'name', 'document_number')->orderBy('name')->get();
+        $currency = Setting::where('key', 'currency_symbol')->value('value') ?? 'S/';
+        return view('pos.partials.cart', compact('order', 'clients', 'currency'))->render();
+    }
+}

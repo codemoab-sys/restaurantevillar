@@ -1,0 +1,153 @@
+<?php
+
+namespace App\Services\Sunat;
+
+use App\Models\Order;
+
+/**
+ * Convierte una Order en array JSON compatible con la API de NubeFact.
+ *
+ * Estructura JSON NubeFact:
+ * https://www.nubefact.com/manual/ (Sección "ESTRUCTURA PARA GENERAR FACTURAS, BOLETAS Y NOTAS")
+ */
+class NubeFactInvoiceBuilder
+{
+    public function __construct(private SunatConfig $config)
+    {
+    }
+
+    /**
+     * Convierte una Order en array listo para enviar a NubeFact.
+     */
+    public function build(Order $order): array
+    {
+        $isFactura = $order->document_type === 'Factura';
+        $igvFactor = $this->config->igvFactor(); // 0.18
+        $denom     = 1 + $igvFactor;             // 1.18
+
+        // ═══ ITEMS ═══════════════════════════════════════════════════
+        $items          = [];
+        $totalGravada   = 0.0;
+        $totalIgv       = 0.0;
+        $totalExonerada = 0.0;
+        $totalInafecta  = 0.0;
+
+        foreach ($order->details as $line) {
+            $product = $line->product;
+
+            $precioVentaUnit = (float) $line->price;
+            $valorUnit       = round($precioVentaUnit / $denom, 6);
+            $cantidad        = (float) $line->quantity;
+            $valorVenta      = round($valorUnit * $cantidad, 2);
+            $igvLinea        = round($valorVenta * $igvFactor, 2);
+            $subtotalLinea   = round($valorVenta + $igvLinea, 2);
+
+            $totalGravada += $valorVenta;
+            $totalIgv     += $igvLinea;
+
+            $items[] = [
+                'unidad_de_medida' => 'NIU',
+                'codigo'           => (string) ($product->id ?? '001'),
+                'descripcion'      => $product->name ?? 'Producto',
+                'cantidad'         => $cantidad,
+                'valor_unitario'   => $valorUnit,
+                'precio_unitario'  => round($precioVentaUnit, 2),
+                'descuento'        => '',
+                'subtotal'         => $valorVenta,
+                'tipo_de_igv'      => 1,          // 1 = Gravado - Operación Onerosa
+                'igv'              => $igvLinea,
+                'total'            => $subtotalLinea,
+                'anticipo_regularizacion' => false,
+                'anticipo_documento_serie' => '',
+                'anticipo_documento_numero' => '',
+            ];
+        }
+
+        // ═══ TOTALES ════════════════════════════════════════════════
+        $totalGravada = round($totalGravada, 2);
+        $totalIgv     = round($totalIgv, 2);
+        $totalVenta   = round($totalGravada + $totalIgv, 2);
+
+        // ═══ TIPO DE MONEDA ═════════════════════════════════════════
+        $monedaCodigo = 1; // 1 = Soles
+
+        // ═══ DOCUMENTO DEL CLIENTE ══════════════════════════════════
+        if ($isFactura) {
+            $clienteTipoDoc = 6;  // RUC
+            $clienteNumDoc  = $order->client_document ?: '20000000001';
+            $clienteNombre  = $order->client_name ?: 'CLIENTE GENERAL';
+        } else {
+            // Boleta
+            $doc  = trim((string) $order->client_document);
+            $tipo = (strlen($doc) === 8) ? 1 : '-'; // 1 = DNI, - = Varios
+            $clienteTipoDoc = $tipo;
+            $clienteNumDoc  = $doc ?: '-';
+            $clienteNombre  = $order->client_name ?: 'CLIENTE VARIOS';
+        }
+
+        // ═══ FECHA ══════════════════════════════════════════════════
+        $fechaEmision = now()->format('d-m-Y');
+
+        // ═══ JSON CABECERA ══════════════════════════════════════════
+        $json = [
+            'operacion'                  => 'generar_comprobante',
+            'tipo_de_comprobante'        => $isFactura ? 1 : 2, // 1=Factura, 2=Boleta
+            'serie'                      => $order->serie,
+            'numero'                     => (int) $order->correlativo,
+            'sunat_transaction'          => 1,  // 1 = Venta interna
+            'cliente_tipo_de_documento'  => $clienteTipoDoc,
+            'cliente_numero_de_documento' => $clienteNumDoc,
+            'cliente_denominacion'       => $clienteNombre,
+            'cliente_direccion'          => $this->config->direccion(),
+            'cliente_email'              => '',
+            'cliente_email_1'            => '',
+            'cliente_email_2'            => '',
+            'fecha_de_emision'           => $fechaEmision,
+            'fecha_de_vencimiento'       => '',
+            'moneda'                     => $monedaCodigo,
+            'tipo_de_cambio'             => '',
+            'porcentaje_de_igv'          => $this->config->igvRate(),
+            'descuento_global'           => '',
+            'total_descuento'            => '',
+            'total_anticipo'             => '',
+            'total_gravada'              => $totalGravada,
+            'total_inafecta'             => $totalInafecta,
+            'total_exonerada'            => $totalExonerada,
+            'total_igv'                  => $totalIgv,
+            'total_gratuita'             => '',
+            'total_otros_cargos'         => '',
+            'total'                      => $totalVenta,
+            'percepcion_tipo'            => '',
+            'percepcion_base_imponible'  => '',
+            'total_percepcion'           => '',
+            'total_incluido_percepcion'  => '',
+            'retencion_tipo'             => '',
+            'retencion_base_imponible'   => '',
+            'total_retencion'            => '',
+            'total_impuestos_bolsas'     => '',
+            'detraccion'                 => false,
+            'observaciones'              => '',
+            'documento_que_se_modifica_tipo'    => '',
+            'documento_que_se_modifica_serie'   => '',
+            'documento_que_se_modifica_numero'  => '',
+            'tipo_de_nota_de_credito'   => '',
+            'tipo_de_nota_de_debito'    => '',
+            'enviar_automaticamente_a_la_sunat' => true,
+            'enviar_automaticamente_al_cliente' => false,
+            'condiciones_de_pago'        => '',
+            'medio_de_pago'              => '',
+            'cancelado'                  => true,
+            'placa_vehiculo'             => '',
+            'orden_compra_servicio'      => '',
+            'formato_de_pdf'             => '',
+            'generado_por_contingencia'  => '',
+            'bienes_region_selva'        => '',
+            'servicios_region_selva'     => '',
+            'items'                      => $items,
+            'guias'                      => [],
+            'venta_al_credito'           => [],
+        ];
+
+        return $json;
+    }
+}
