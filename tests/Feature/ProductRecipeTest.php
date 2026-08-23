@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Area;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Table;
 use App\Models\User;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
@@ -140,5 +142,62 @@ class ProductRecipeTest extends TestCase
             'product_id' => $product->id,
             'ingredient_id' => $ingredientA->id,
         ]);
+    }
+
+    public function test_pos_cannot_add_recipe_product_when_ingredient_stock_is_insufficient(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $area = Area::create(['name' => 'Salón']);
+        $table = Table::create([
+            'area_id' => $area->id,
+            'name' => 'Mesa 1',
+            'seats' => 4,
+            'status' => 'available',
+        ]);
+
+        $category = Category::create([
+            'name' => 'Platos principales',
+            'is_active' => true,
+        ]);
+
+        $ingredient = Product::create([
+            'name' => 'Pan de hamburguesa',
+            'category_id' => $category->id,
+            'price' => 1.50,
+            'cost' => 0.80,
+            'stock' => 1,
+            'is_active' => true,
+            'is_saleable' => false,
+            'is_new' => false,
+            'is_chef_recommendation' => false,
+        ]);
+
+        $product = Product::create([
+            'name' => 'Hamburguesa especial',
+            'category_id' => $category->id,
+            'price' => 24.90,
+            'cost' => 12.00,
+            'stock' => 10,
+            'is_active' => true,
+            'is_saleable' => true,
+            'is_new' => false,
+            'is_chef_recommendation' => false,
+        ]);
+
+        $product->ingredients()->sync([
+            $ingredient->id => ['quantity' => 2],
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->post('/pos/order/' . $table->id . '/add', [
+                'product_id' => $product->id,
+            ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonFragment(['error' => 'Stock insuficiente para el ingrediente: Pan de hamburguesa']);
     }
 }

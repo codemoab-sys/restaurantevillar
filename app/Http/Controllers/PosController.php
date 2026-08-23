@@ -169,34 +169,66 @@ class PosController extends Controller
      */
     private function checkStockAvailability(Product $product, Table $table): ?string
     {
-        if (is_null($product->stock)) {
-            return null; // Servicio sin control de stock
+        $product->loadMissing('ingredients');
+
+        if (!is_null($product->stock)) {
+            if ($product->stock <= 0) {
+                return 'Sin stock disponible';
+            }
+
+            // Stock reservado en órdenes pendientes de MESAS (no delivery)
+            $reserved = DB::table('rest_order_details')
+                ->join('rest_orders', 'rest_orders.id', '=', 'rest_order_details.order_id')
+                ->where('rest_orders.status', 'pending')
+                ->whereNotNull('rest_orders.table_id')
+                ->where('rest_order_details.product_id', $product->id)
+                ->sum('rest_order_details.quantity');
+
+            $available = $product->stock - $reserved;
+
+            if ($available <= 0) {
+                return 'Sin stock disponible. Todas las unidades están en otras mesas.';
+            }
+
+            // Verificar si la mesa actual ya tiene el producto y no puede sumar más
+            $order = Order::where('table_id', $table->id)->where('status', 'pending')->first();
+            if ($order) {
+                $detail = $order->details()->where('product_id', $product->id)->first();
+                if ($detail && $detail->quantity >= $available) {
+                    return 'Stock insuficiente. Disponible: ' . $available;
+                }
+            }
         }
 
-        if ($product->stock <= 0) {
-            return 'Sin stock disponible';
-        }
+        // Si el producto tiene receta, validar que también haya stock disponible de cada insumo.
+        foreach ($product->ingredients as $ingredient) {
+            if (is_null($ingredient->stock)) {
+                continue;
+            }
 
-        // Stock reservado en órdenes pendientes de MESAS (no delivery)
-        $reserved = DB::table('rest_order_details')
-            ->join('rest_orders', 'rest_orders.id', '=', 'rest_order_details.order_id')
-            ->where('rest_orders.status', 'pending')
-            ->whereNotNull('rest_orders.table_id')
-            ->where('rest_order_details.product_id', $product->id)
-            ->sum('rest_order_details.quantity');
+            $requestedQty = 1;
+            $order = Order::where('table_id', $table->id)->where('status', 'pending')->first();
+            if ($order) {
+                $detail = $order->details()->where('product_id', $product->id)->first();
+                if ($detail) {
+                    $requestedQty = $detail->quantity + 1;
+                }
+            }
 
-        $available = $product->stock - $reserved;
+            $requiredQty = (float) $ingredient->pivot->quantity * $requestedQty;
 
-        if ($available <= 0) {
-            return 'Sin stock disponible. Todas las unidades están en otras mesas.';
-        }
+            $reservedIngredient = DB::table('rest_order_details')
+                ->join('rest_orders', 'rest_orders.id', '=', 'rest_order_details.order_id')
+                ->join('rest_product_ingredients', 'rest_product_ingredients.product_id', '=', 'rest_order_details.product_id')
+                ->where('rest_orders.status', 'pending')
+                ->where('rest_product_ingredients.ingredient_id', $ingredient->id)
+                ->selectRaw('SUM(rest_order_details.quantity * rest_product_ingredients.quantity) as reserved')
+                ->value('reserved');
 
-        // Verificar si la mesa actual ya tiene el producto y no puede sumar más
-        $order = Order::where('table_id', $table->id)->where('status', 'pending')->first();
-        if ($order) {
-            $detail = $order->details()->where('product_id', $product->id)->first();
-            if ($detail && $detail->quantity >= $available) {
-                return 'Stock insuficiente. Disponible: ' . $available;
+            $availableIngredient = $ingredient->stock - ((float) ($reservedIngredient ?? 0));
+
+            if ($availableIngredient < $requiredQty) {
+                return 'Stock insuficiente para el ingrediente: ' . $ingredient->name;
             }
         }
 
