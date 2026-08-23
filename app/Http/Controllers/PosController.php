@@ -30,11 +30,11 @@ class PosController extends Controller
             }, 'reservations' => function($q) {
                 $q->where('status', 'confirmed')
                   ->whereDate('reservation_time', Carbon::today())
-                  ->where('reservation_time', '>=', Carbon::now()->subHours(2)) 
+                  ->where('reservation_time', '>=', Carbon::now()->subHours(2))
                   ->orderBy('reservation_time', 'asc');
             }]);
         }])->get();
-        
+
         $currency = Setting::where('key', 'currency_symbol')->value('value') ?? 'S/';
 
         // Últimas 5 ventas para el panel de "Últimas Ventas"
@@ -102,7 +102,7 @@ class PosController extends Controller
         if ($error) {
             return response()->json(['error' => $error], 422);
         }
-        
+
         $this->addItemToTable($table, $product);
         return $this->getCartHtml($table);
     }
@@ -209,7 +209,7 @@ class PosController extends Controller
     {
         DB::transaction(function() use ($table, $product) {
             $order = Order::firstOrCreate(
-                ['table_id' => $table->id, 'status' => 'pending'], 
+                ['table_id' => $table->id, 'status' => 'pending'],
                 ['user_id' => auth()->id() ?? 1, 'total' => 0]
             );
 
@@ -219,9 +219,9 @@ class PosController extends Controller
                 $detail->increment('quantity');
             } else {
                 $order->details()->create([
-                    'product_id' => $product->id, 
-                    'quantity' => 1, 
-                    'price' => $product->price, 
+                    'product_id' => $product->id,
+                    'quantity' => 1,
+                    'price' => $product->price,
                     'status' => 'pending'
                 ]);
             }
@@ -232,11 +232,13 @@ class PosController extends Controller
     // --- ACTUALIZAR CANTIDAD ---
     public function updateQuantity(Request $request, OrderDetail $detail)
     {
+        $this->authorizePendingDetail($detail);
+        $request->validate(['quantity' => ['required', 'integer', 'min:0']]);
         $newQty = $request->quantity;
         $order = $detail->order;
-        
-        if ($newQty < 1) { 
-            $detail->delete(); 
+
+        if ($newQty < 1) {
+            $detail->delete();
             $this->cleanupEmptyOrder($order);
         } else {
             $product = $detail->product;
@@ -247,34 +249,37 @@ class PosController extends Controller
                     ->whereNotNull('rest_orders.table_id')
                     ->where('rest_order_details.product_id', $product->id)
                     ->sum('rest_order_details.quantity');
-                
+
                 $available = $product->stock - $reserved + $detail->quantity;
                 if ($newQty > $available) {
                     return response()->json(['error' => 'Stock insuficiente. Disponible: ' . $available], 422);
                 }
             }
-            $detail->update(['quantity' => $newQty]); 
+            $detail->update(['quantity' => $newQty]);
         }
-        
+
         $this->recalculateTotal($order);
         return $this->getCartHtml($order->table);
     }
 
     // --- ACTUALIZAR NOTA ---
-    public function updateNote(Request $request, OrderDetail $detail) 
-    { 
-        $detail->update(['note' => $request->note]); 
-        return $this->getCartHtml($detail->order->table); 
+    public function updateNote(Request $request, OrderDetail $detail)
+    {
+        $this->authorizePendingDetail($detail);
+        $request->validate(['note' => ['nullable', 'string', 'max:1000']]);
+        $detail->update(['note' => $request->note]);
+        return $this->getCartHtml($detail->order->table);
     }
 
     // --- ELIMINAR ITEM ---
-    public function removeItem(OrderDetail $detail) 
-    { 
-        $order = $detail->order; 
-        $detail->delete(); 
+    public function removeItem(OrderDetail $detail)
+    {
+        $this->authorizePendingDetail($detail);
+        $order = $detail->order;
+        $detail->delete();
         $this->cleanupEmptyOrder($order);
-        $this->recalculateTotal($order); 
-        return $this->getCartHtml($order->table); 
+        $this->recalculateTotal($order);
+        return $this->getCartHtml($order->table);
     }
 
     /**
@@ -295,29 +300,36 @@ class PosController extends Controller
     }
 
     // --- APLICAR DESCUENTO (Corregido para devolver HTML) ---
-    public function applyDiscount(Request $request, Order $order) 
-    { 
-        $order->discount = $request->input('discount', 0); 
-        $order->tip = $request->input('tip', 0); 
-        $order->save(); 
-        $this->recalculateTotal($order); 
-        return $this->getCartHtml($order->table); 
+    public function applyDiscount(Request $request, Order $order)
+    {
+        $this->authorizePendingOrder($order);
+        $request->validate([
+            'discount' => ['required', 'numeric', 'min:0'],
+            'tip' => ['required', 'numeric', 'min:0'],
+        ]);
+        $order->discount = $request->input('discount', 0);
+        $order->tip = $request->input('tip', 0);
+        $order->save();
+        $this->recalculateTotal($order);
+        return $this->getCartHtml($order->table);
     }
-    
+
     public function moveTable(Request $request, Order $order) {
-        $request->validate(['target_table_id' => 'required|exists:tables,id']);
+        $this->authorizePendingOrder($order);
+        $request->validate(['target_table_id' => 'required|exists:rest_tables,id']);
         if (Order::where('table_id', $request->target_table_id)->where('status', 'pending')->exists()) return redirect()->back()->with('error', 'Ocupada.');
         $order->table_id = $request->target_table_id; $order->save();
         return redirect()->route('pos.order', $request->target_table_id);
     }
 
-    public function getSplitContent(Order $order) { return view('pos.partials.split_content', compact('order')); }
-    public function processSplit(Request $request, Order $order) { return redirect()->back(); }
-    public function precheck(Order $order) { $settings = Setting::pluck('value', 'key')->toArray(); return view('sales.ticket', compact('order', 'settings')); }
-    public function kitchenTicket(Order $order) { return view('sales.kitchen_ticket', compact('order')); }
+    public function getSplitContent(Order $order) { $this->authorizePendingOrder($order); return view('pos.partials.split_content', compact('order')); }
+    public function processSplit(Request $request, Order $order) { $this->authorizePendingOrder($order); return redirect()->back(); }
+    public function precheck(Order $order) { $this->authorizeOrder($order); $settings = Setting::pluck('value', 'key')->toArray(); return view('sales.ticket', compact('order', 'settings')); }
+    public function kitchenTicket(Order $order) { $this->authorizeOrder($order); return view('sales.kitchen_ticket', compact('order')); }
 
     public function checkout(Request $request, Order $order)
     {
+        $this->authorizePendingOrder($order);
         if($order->status !== 'pending') {
             return $request->expectsJson()
                 ? response()->json(['success' => false, 'message' => 'Orden cerrada.'], 422)
@@ -470,6 +482,24 @@ class PosController extends Controller
         $subtotal = $order->details->sum(fn($d) => $d->price * $d->quantity);
         $total = ($subtotal - ($order->discount ?? 0)) + ($order->tip ?? 0);
         $order->update(['total' => max(0, $total)]);
+    }
+
+    private function authorizePendingDetail(OrderDetail $detail): void
+    {
+        $this->authorizePendingOrder($detail->order);
+    }
+
+    private function authorizePendingOrder(Order $order): void
+    {
+        abort_unless($order->status === 'pending', 403);
+        $this->authorizeOrder($order);
+    }
+
+    private function authorizeOrder(Order $order): void
+    {
+        $user = Auth::user();
+        $canManageAll = in_array($user?->role, ['admin', 'cashier'], true);
+        abort_unless($canManageAll || (int) $order->user_id === (int) $user?->id, 403);
     }
 
     private function getCartHtml(Table $table)
