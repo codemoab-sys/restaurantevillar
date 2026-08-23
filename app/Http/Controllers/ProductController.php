@@ -21,7 +21,9 @@ class ProductController extends Controller
     public function create()
     {
         $categories = Category::where('is_active', true)->get();
-        return view('products.create', compact('categories'));
+        $ingredients = Product::where('is_active', true)->get();
+
+        return view('products.create', compact('categories', 'ingredients'));
     }
 
     public function store(Request $request)
@@ -35,7 +37,9 @@ class ProductController extends Controller
             'promotional_price' => 'nullable|numeric|min:0',
             'barcode' => 'nullable|string|max:50|unique:rest_products,barcode', // <--- NUEVO
             'image' => 'nullable|image|max:2048',
-            'stock' => 'nullable|integer|min:0'
+            'stock' => 'nullable|integer|min:0',
+            'ingredients' => 'sometimes|array',
+            'ingredients.*' => 'nullable|numeric|min:0.01',
         ]);
 
         $data = $request->all();
@@ -55,7 +59,13 @@ class ProductController extends Controller
         // 3. Crear Producto
         $product = Product::create($data);
 
-        // 4. Registro inicial en Kardex si hay stock
+        // 4. Guardar receta/insumos si se enviaron
+        $recipeIngredients = $this->normalizeRecipeIngredients($request->input('ingredients', []));
+        if (!empty($recipeIngredients)) {
+            $product->ingredients()->sync($recipeIngredients);
+        }
+
+        // 5. Registro inicial en Kardex si hay stock
         if($request->stock > 0) {
             InventoryLog::create([
                 'product_id' => $product->id,
@@ -91,6 +101,8 @@ class ProductController extends Controller
             'promotional_price' => 'nullable|numeric|min:0',
             'barcode' => 'nullable|string|max:50|unique:rest_products,barcode,' . $product->id, // <--- NUEVO
             'image' => 'nullable|image|max:2048',
+            'ingredients' => 'sometimes|array',
+            'ingredients.*' => 'nullable|numeric|min:0.01',
         ]);
 
         $data = $request->all();
@@ -112,15 +124,25 @@ class ProductController extends Controller
         $product->update($data);
 
         // Actualizar receta/insumos (Si enviaste array de ingredientes)
-        if ($request->has('ingredients')) {
-            $syncData = [];
-            foreach ($request->ingredients as $id => $qty) {
-                if ($qty > 0) $syncData[$id] = ['quantity' => $qty];
-            }
-            $product->ingredients()->sync($syncData);
-        }
+        $recipeIngredients = $this->normalizeRecipeIngredients($request->input('ingredients', []));
+        $product->ingredients()->sync($recipeIngredients);
 
         return redirect()->route('products.index')->with('success', 'Producto actualizado.');
+    }
+
+    private function normalizeRecipeIngredients(array $ingredients): array
+    {
+        $normalized = [];
+
+        foreach ($ingredients as $ingredientId => $quantity) {
+            if (!is_numeric($quantity) || (float) $quantity <= 0) {
+                continue;
+            }
+
+            $normalized[(int) $ingredientId] = ['quantity' => (float) $quantity];
+        }
+
+        return $normalized;
     }
 
     public function destroy(Product $product)

@@ -12,7 +12,7 @@
                 <tbody>
                     @foreach($order->details as $detail)
                         <tr class="border-bottom">
-                            
+
                             <td class="px-0 align-middle">
                                 <button class="btn btn-sm text-danger p-0" onclick="removeItem({{ $detail->id }})" title="Eliminar">
                                     <i class="bi bi-x-circle-fill fs-5"></i>
@@ -30,9 +30,9 @@
                                     @if($detail->note)
                                         <i class="bi bi-chat-square-text-fill text-warning" style="font-size: 0.7rem;" title="{{ $detail->note }}"></i>
                                     @endif
-                                    <a href="javascript:void(0)" class="ms-1 text-decoration-none text-primary" 
+                                    <a href="javascript:void(0)" class="ms-1 text-decoration-none text-primary"
                                        data-bs-toggle="modal" data-bs-target="#noteModal"
-                                       data-detail-id="{{ $detail->id }}" 
+                                       data-detail-id="{{ $detail->id }}"
                                        data-note-content="{{ $detail->note }}">
                                        <i class="bi bi-pencil" style="font-size: 0.7rem;"></i>
                                     </a>
@@ -42,10 +42,10 @@
                             <td class="align-middle px-0">
                                 <div class="input-group input-group-sm flex-nowrap">
                                     <button class="btn btn-outline-secondary px-1 py-0" style="font-size: 0.8rem;" onclick="updateQty({{ $detail->id }}, {{ $detail->quantity - 1 }})">-</button>
-                                    <input type="text" class="form-control text-center px-0 py-0 fw-bold bg-white border-secondary" 
+                                    <input type="text" class="form-control text-center px-0 py-0 fw-bold bg-white border-secondary"
                                            value="{{ $detail->quantity }}" readonly style="font-size: 0.85rem;">
                                     @php $atLimit = !is_null($detail->product->stock) && $detail->quantity >= $detail->product->stock; @endphp
-                                    <button class="btn btn-{{ $atLimit ? 'secondary' : 'outline-primary' }} px-1 py-0" style="font-size: 0.8rem;" 
+                                    <button class="btn btn-{{ $atLimit ? 'secondary' : 'outline-primary' }} px-1 py-0" style="font-size: 0.8rem;"
                                             onclick="updateQty({{ $detail->id }}, {{ $detail->quantity + 1 }})"
                                             {{ $atLimit ? 'disabled' : '' }}>
                                         @if($atLimit) <i class="bi bi-lock-fill" style="font-size: 0.6rem;"></i> @endif +
@@ -77,7 +77,7 @@
             <div class="col-6 text-muted">Subtotal:</div>
             <div class="col-6 text-end">{{ number_format($order->total, 2) }}</div>
         </div>
-        
+
         @if($order->discount > 0)
             <div class="row mb-1 text-danger fw-bold" style="font-size: 0.8rem;">
                 <div class="col-6">Descuento:</div>
@@ -118,7 +118,7 @@
         </div>
 
         <div class="d-grid">
-            <button class="btn btn-success fw-bold py-2 shadow-sm" 
+            <button class="btn btn-success fw-bold py-2 shadow-sm"
                     onclick="var m=document.getElementById('checkoutModal'); if(m){ new bootstrap.Modal(m).show(); }">
                 <i class="bi bi-cash-coin me-2"></i> COBRAR
             </button>

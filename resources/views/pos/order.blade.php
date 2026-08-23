@@ -356,7 +356,7 @@ foreach($categories as $cat) {
                 <div id="cashInputGroup">
                     <div class="mb-3">
                         <label class="form-label fw-bold small">Recibido</label>
-                        <input type="number" step="0.01" name="received_amount" id="receivedAmount" class="form-control text-center fw-bold fs-4 text-success" 
+                        <input type="number" step="0.01" name="received_amount" id="receivedAmount" class="form-control text-center fw-bold fs-4 text-success"
                                value="{{ number_format($order->total, 2, '.', '') }}"
                                oninput="calculateChange()" onclick="this.select()">
                     </div>
@@ -432,9 +432,9 @@ foreach($categories as $cat) {
         barcodeInput.focus();
         barcodeInput.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
-                e.preventDefault(); 
+                e.preventDefault();
                 let code = barcodeInput.value.trim();
-                if(code.length > 0) addByBarcode(code); 
+                if(code.length > 0) addByBarcode(code);
             }
         });
     }
