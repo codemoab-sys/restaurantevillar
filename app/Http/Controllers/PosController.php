@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use Illuminate\Validation\ValidationException;
 
 class PosController extends Controller
 {
@@ -268,7 +269,7 @@ class PosController extends Controller
         $this->authorizePendingDetail($detail);
         $request->validate(['note' => ['nullable', 'string', 'max:1000']]);
         $detail->update(['note' => $request->note]);
-        return $this->getCartHtml($detail->order->table()->firstOrFail()); 
+        return $this->getCartHtml($detail->order->table()->firstOrFail());
     }
 
     // --- ELIMINAR ITEM ---
@@ -279,7 +280,7 @@ class PosController extends Controller
         $detail->delete();
         $this->cleanupEmptyOrder($order);
         $this->recalculateTotal($order);
-        return $this->getCartHtml($order->table()->firstOrFail()); 
+        return $this->getCartHtml($order->table()->firstOrFail());
     }
 
     /**
@@ -376,6 +377,9 @@ class PosController extends Controller
         }
 
         DB::transaction(function() use ($order, $method, $received, $change, $request, $clientId, $clientName, $documentType, $clientDocument) {
+            $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $order->load('details.product.ingredients');
+
             // 1. Calcular IGV (Perú 18%) si es comprobante electrónico
             $config = new SunatConfig();
             $igvFactor = $config->igvFactor();
@@ -418,49 +422,55 @@ class PosController extends Controller
                 'sunat_status' => $isElectronic ? 'PENDING' : 'NA',
             ]);
 
-            foreach($order->details as $detail) {
-                $product = $detail->product;
+            $requirements = [];
+            foreach ($order->details as $detail) {
+                $product = Product::whereKey($detail->product_id)->lockForUpdate()->firstOrFail();
                 $ingredients = $product->ingredients;
 
-                if ($ingredients->count() > 0) {
-                    foreach ($ingredients as $ingredient) {
-                        $qtyToDeduct = $ingredient->pivot->quantity * $detail->quantity;
-                        $oldStock = $ingredient->stock;
-                        $ingredient->decrement('stock', $qtyToDeduct);
-                        InventoryLog::create([
-                            'product_id' => $ingredient->id,
-                            'user_id' => Auth::id(),
-                            'type' => 'sale',
-                            'quantity' => -$qtyToDeduct,
-                            'old_stock' => $oldStock,
-                            'new_stock' => $oldStock - $qtyToDeduct,
-                            'note' => 'Venta: ' . $product->name . ' (Orden #' . $order->id . ')'
-                        ]);
-                    }
-                } else {
-                    if (!is_null($product->stock)) {
-                        $oldStock = $product->stock;
-                        $product->decrement('stock', $detail->quantity);
-                        InventoryLog::create([
-                            'product_id' => $product->id,
-                            'user_id' => Auth::id(),
-                            'type' => 'sale',
-                            'quantity' => -($detail->quantity),
-                            'old_stock' => $oldStock,
-                            'new_stock' => $oldStock - $detail->quantity,
-                            'note' => 'Venta POS #' . $order->id
-                        ]);
-                    }
+                if ($ingredients->isEmpty()) {
+                    $requirements[$product->id] = ($requirements[$product->id] ?? 0) + $detail->quantity;
+                    continue;
+                }
+
+                foreach ($ingredients as $ingredient) {
+                    $requirements[$ingredient->id] = ($requirements[$ingredient->id] ?? 0)
+                        + ($ingredient->pivot->quantity * $detail->quantity);
                 }
             }
 
-            // Desactivar automáticamente productos sin stock
-            foreach ($order->details as $detail) {
-                $product = $detail->product;
-                if (!is_null($product->stock) && $product->stock <= 0) {
+            foreach ($requirements as $productId => $requiredQuantity) {
+                $product = Product::whereKey($productId)->lockForUpdate()->firstOrFail();
+                if (!is_null($product->stock) && $product->stock < $requiredQuantity) {
+                    throw ValidationException::withMessages([
+                        'stock' => "Stock insuficiente para {$product->name}.",
+                    ]);
+                }
+            }
+
+            foreach ($requirements as $productId => $requiredQuantity) {
+                $product = Product::whereKey($productId)->lockForUpdate()->firstOrFail();
+                if (is_null($product->stock)) {
+                    continue;
+                }
+
+                $oldStock = $product->stock;
+                $newStock = $oldStock - $requiredQuantity;
+                $product->update(['stock' => $newStock]);
+                InventoryLog::create([
+                    'product_id' => $product->id,
+                    'user_id' => Auth::id(),
+                    'type' => 'sale',
+                    'quantity' => -$requiredQuantity,
+                    'old_stock' => $oldStock,
+                    'new_stock' => $newStock,
+                    'note' => 'Venta POS #' . $order->id,
+                ]);
+
+                if ($newStock <= 0) {
                     $product->update(['is_saleable' => false]);
                 }
             }
+
         });
 
         // 3. Envío a SUNAT (no bloqueante: si falla queda en ERROR y puede reintentarse desde Billing)
