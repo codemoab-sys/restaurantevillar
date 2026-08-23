@@ -27,12 +27,12 @@ class SunatConfig
 
     public function ruc(): string
     {
-        return (string) $this->get('sunat_ruc', '20000000001');
+        return trim((string) $this->get('sunat_ruc', ''));
     }
 
     public function razonSocial(): string
     {
-        return (string) $this->get('sunat_razon_social', 'EMPRESA DEMO SAC');
+        return trim((string) $this->get('sunat_razon_social', ''));
     }
 
     public function nombreComercial(): string
@@ -47,7 +47,7 @@ class SunatConfig
 
     public function ubigeo(): string
     {
-        return (string) $this->get('sunat_ubigeo', '150101');
+        return trim((string) $this->get('sunat_ubigeo', ''));
     }
 
     public function departamento(): string
@@ -117,6 +117,10 @@ class SunatConfig
      */
     public function isNubefactConfigured(): bool
     {
-        return !empty($this->nubefactRuta()) && !empty($this->nubefactToken());
+        return filter_var($this->nubefactRuta(), FILTER_VALIDATE_URL) !== false
+            && !empty($this->nubefactToken())
+            && preg_match('/^\d{11}$/', $this->ruc()) === 1
+            && $this->razonSocial() !== ''
+            && preg_match('/^\d{6}$/', $this->ubigeo()) === 1;
     }
 }

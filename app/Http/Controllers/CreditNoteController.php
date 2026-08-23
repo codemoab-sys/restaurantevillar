@@ -73,6 +73,11 @@ class CreditNoteController extends Controller
     {
         abort_unless(in_array($order->document_type, ['Boleta', 'Factura']), 404);
 
+        if ($order->sunat_status !== 'ACCEPTED') {
+            return redirect()->route('billing.show', $order)
+                ->with('error', 'Solo se puede emitir nota de crédito sobre comprobantes ACEPTADOS por SUNAT.');
+        }
+
         $request->validate([
             'reason_code'        => 'required|string|in:01,02,03,06,07,13',
             'reason_description' => 'required|string|max:255',

@@ -39,7 +39,7 @@ class NubeFactService
         }
 
         if (!$this->config->isNubefactConfigured()) {
-            throw new \RuntimeException('NubeFact no está configurado. Ingrese RUTA y TOKEN en Configuración.');
+            throw new \RuntimeException('Configure RUTA, TOKEN y datos reales del emisor en Configuración SUNAT.');
         }
 
         $json = $this->invoiceBuilder->build($order);
@@ -100,8 +100,12 @@ class NubeFactService
 
     public function sendCreditNote(CreditNote $cn): CreditNote
     {
+        if (!$cn->order || $cn->order->sunat_status !== 'ACCEPTED') {
+            throw new \RuntimeException('Solo se puede enviar una nota de crédito para un comprobante aceptado por SUNAT.');
+        }
+
         if (!$this->config->isNubefactConfigured()) {
-            throw new \RuntimeException('NubeFact no está configurado. Ingrese RUTA y TOKEN en Configuración.');
+            throw new \RuntimeException('Configure RUTA, TOKEN y datos reales del emisor en Configuración SUNAT.');
         }
 
         $json = $this->creditNoteBuilder->build($cn);
