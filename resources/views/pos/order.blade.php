@@ -357,7 +357,7 @@ foreach($categories as $cat) {
                     <div class="mb-3">
                         <label class="form-label fw-bold small">Recibido</label>
                         <input type="number" step="0.01" name="received_amount" id="receivedAmount" class="form-control text-center fw-bold fs-4 text-success" 
-                               value="{{ number_format($order->total + ($order->tip ?? 0) - ($order->discount ?? 0), 2, '.', '') }}" 
+                               value="{{ number_format($order->total, 2, '.', '') }}"
                                oninput="calculateChange()" onclick="this.select()">
                     </div>
                     <div class="d-flex justify-content-between">
@@ -365,7 +365,7 @@ foreach($categories as $cat) {
                         <h4 class="fw-bold mb-0 text-secondary" id="changeAmount">0.00</h4>
                     </div>
                 </div>
-                <input type="hidden" id="hiddenTotal" value="{{ number_format($order->total + ($order->tip ?? 0) - ($order->discount ?? 0), 2, '.', '') }}">
+                <input type="hidden" id="hiddenTotal" value="{{ number_format($order->total, 2, '.', '') }}">
             </div>
             <div class="modal-footer p-2 bg-light">
                 <button type="submit" id="confirmPayBtn" class="btn btn-success w-100 btn-lg fw-bold">CONFIRMAR PAGO</button>

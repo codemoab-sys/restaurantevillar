@@ -71,7 +71,7 @@
 
 <div class="bg-white border-top p-3" style="flex-shrink: 0; margin-top: auto;">
     @if($order)
-        <input type="hidden" id="cartTotalValue" value="{{ number_format($order->total + ($order->tip ?? 0) - ($order->discount ?? 0), 2, '.', '') }}">
+        <input type="hidden" id="cartTotalValue" value="{{ number_format($order->total, 2, '.', '') }}">
 
         <div class="row mb-1" style="font-size: 0.8rem;">
             <div class="col-6 text-muted">Subtotal:</div>
@@ -95,7 +95,7 @@
         <div class="d-flex justify-content-between align-items-center mb-2 mt-2 border-top pt-2">
             <h5 class="mb-0 fw-bold text-dark fs-6">TOTAL:</h5>
             <h3 class="mb-0 fw-bold text-primary fs-4">
-                {{ $currency ?? 'S/' }}{{ number_format($order->total + ($order->tip ?? 0) - ($order->discount ?? 0), 2) }}
+                {{ $currency ?? 'S/' }}{{ number_format($order->total, 2) }}
             </h3>
         </div>
 

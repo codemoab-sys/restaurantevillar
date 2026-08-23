@@ -210,7 +210,7 @@ class PosController extends Controller
         DB::transaction(function() use ($table, $product) {
             $order = Order::firstOrCreate(
                 ['table_id' => $table->id, 'status' => 'pending'],
-                ['user_id' => auth()->id() ?? 1, 'total' => 0]
+                ['user_id' => Auth::id() ?? 1, 'total' => 0]
             );
 
             $detail = $order->details()->where('product_id', $product->id)->first();
@@ -259,7 +259,7 @@ class PosController extends Controller
         }
 
         $this->recalculateTotal($order);
-        return $this->getCartHtml($order->table);
+        return $this->getCartHtml($order->table()->firstOrFail());
     }
 
     // --- ACTUALIZAR NOTA ---
@@ -268,7 +268,7 @@ class PosController extends Controller
         $this->authorizePendingDetail($detail);
         $request->validate(['note' => ['nullable', 'string', 'max:1000']]);
         $detail->update(['note' => $request->note]);
-        return $this->getCartHtml($detail->order->table);
+        return $this->getCartHtml($detail->order->table()->firstOrFail()); 
     }
 
     // --- ELIMINAR ITEM ---
@@ -279,7 +279,7 @@ class PosController extends Controller
         $detail->delete();
         $this->cleanupEmptyOrder($order);
         $this->recalculateTotal($order);
-        return $this->getCartHtml($order->table);
+        return $this->getCartHtml($order->table()->firstOrFail()); 
     }
 
     /**
@@ -307,11 +307,15 @@ class PosController extends Controller
             'discount' => ['required', 'numeric', 'min:0'],
             'tip' => ['required', 'numeric', 'min:0'],
         ]);
+        $subtotal = $order->details()->get()->sum(fn ($detail) => $detail->price * $detail->quantity);
+        if ((float) $request->discount > $subtotal) {
+            return back()->with('error', 'El descuento no puede superar el subtotal.');
+        }
         $order->discount = $request->input('discount', 0);
         $order->tip = $request->input('tip', 0);
         $order->save();
         $this->recalculateTotal($order);
-        return $this->getCartHtml($order->table);
+        return $this->getCartHtml($order->table()->firstOrFail());
     }
 
     public function moveTable(Request $request, Order $order) {
@@ -336,11 +340,23 @@ class PosController extends Controller
                 : redirect()->route('pos.index')->with('error', 'Orden cerrada.');
         }
 
-        $method = $request->input('payment_method', 'cash');
-        $received = $method === 'cash' ? $request->input('received_amount') : $order->total;
+        $request->validate([
+            'payment_method' => ['required', 'in:cash,card'],
+            'received_amount' => ['required_if:payment_method,cash', 'nullable', 'numeric', 'min:0'],
+            'client_id' => ['nullable', 'integer', 'exists:rest_clients,id'],
+            'client_name' => ['nullable', 'string', 'max:255'],
+            'client_document' => ['nullable', 'string', 'max:20'],
+            'document_type' => ['required', 'in:Ticket,Boleta,Factura'],
+        ]);
+
+        $method = $request->input('payment_method');
+        $received = $method === 'cash' ? (float) $request->input('received_amount') : (float) $order->total;
+        if ($method === 'cash' && $received < (float) $order->total) {
+            return back()->with('error', 'El monto recibido es insuficiente.');
+        }
         $change = max(0, $received - $order->total);
         $clientId = $request->input('client_id');
-        $clientName = $clientId ? Client::find($clientId)->name : ($request->input('client_name') ?? 'Público');
+        $clientName = $clientId ? Client::findOrFail($clientId)->name : ($request->input('client_name') ?? 'Público');
         $documentType = $request->input('document_type', 'Ticket');
         $clientDocument = $request->input('client_document');
 
