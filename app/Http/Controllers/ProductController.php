@@ -39,7 +39,7 @@ class ProductController extends Controller
         ]);
 
         $data = $request->all();
-        
+
         // 2. Manejo de Imagen
         if ($request->hasFile('image')) {
             $data['image'] = $request->file('image')->store('products', 'public');
@@ -76,7 +76,7 @@ class ProductController extends Controller
         $categories = Category::where('is_active', true)->get();
         // Productos que pueden ser insumos (todos menos él mismo)
         $ingredients = Product::where('id', '!=', $product->id)->where('is_active', true)->get();
-        
+
         return view('products.edit', compact('product', 'categories', 'ingredients'));
     }
 
@@ -145,10 +145,10 @@ class ProductController extends Controller
     public function adjustStock(Request $request, Product $product)
     {
         $request->validate(['quantity' => 'required|integer|min:0', 'type' => 'required|in:add,sub,set']);
-        
+
         $oldStock = $product->stock ?? 0;
         $qty = $request->quantity;
-        
+
         if ($request->type === 'set') {
             $newStock = $qty;
         } elseif ($request->type === 'sub') {

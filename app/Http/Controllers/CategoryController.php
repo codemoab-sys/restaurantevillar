@@ -75,7 +75,7 @@ class CategoryController extends Controller
         if ($category->image) {
             Storage::disk('public')->delete($category->image);
         }
-        
+
         $category->delete();
 
         return redirect()->route('categories.index')->with('success', 'Categoría eliminada.');
