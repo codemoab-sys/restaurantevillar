@@ -16,8 +16,8 @@ class TableController extends Controller
 
     public function storeArea(Request $request)
     {
-        $request->validate(['name' => 'required']);
-        Area::create($request->all());
+        $request->validate(['name' => 'required|string|max:100']);
+        Area::create($request->only('name'));
         return redirect()->back()->with('success', 'Zona creada.');
     }
 
@@ -31,8 +31,8 @@ class TableController extends Controller
     public function storeTable(Request $request)
     {
         $request->validate([
-            'name' => 'required',
-            'area_id' => 'required|exists:areas,id'
+            'name' => 'required|string|max:100',
+            'area_id' => 'required|exists:rest_areas,id'
         ]);
 
         Table::create([
@@ -63,6 +63,10 @@ class TableController extends Controller
         }
 
         foreach($positions as $pos) {
+            if (!is_array($pos) || !isset($pos['id'], $pos['x'], $pos['y'])) {
+                return response()->json(['status' => 'error', 'message' => 'Posición inválida'], 422);
+            }
+
             // Buscamos la mesa y actualizamos
             $table = Table::find($pos['id']);
             if($table) {
