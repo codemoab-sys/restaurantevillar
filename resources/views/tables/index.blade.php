@@ -137,15 +137,22 @@
     </div>
 </div>
 
+<style>
+    .draggable-table {
+        touch-action: none;
+        user-select: none;
+    }
+</style>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const draggables = document.querySelectorAll('.draggable-table');
         let activeDrag = null;
         let initialX, initialY, currentX, currentY;
 
-        draggables.forEach(el => el.addEventListener('mousedown', dragStart));
-        document.addEventListener('mouseup', dragEnd);
-        document.addEventListener('mousemove', drag);
+        draggables.forEach(el => el.addEventListener('pointerdown', dragStart));
+        document.addEventListener('pointerup', dragEnd);
+        document.addEventListener('pointermove', drag);
 
         document.querySelectorAll('.deactivate-area-form, .activate-area-form, .delete-table-form').forEach(form => {
             form.addEventListener('submit', function(event) {

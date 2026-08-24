@@ -983,5 +983,67 @@ foreach($categories as $cat) {
     .pos-add-overlay i { font-size: 2rem; }
     .pos-add-overlay span { font-size: .8rem; font-weight: 700; letter-spacing: .06em; }
     .pos-product-card:hover .pos-add-overlay { opacity: 1; }
+
+    @media (max-width: 1200px) {
+        #pos-wrap {
+            left: 0 !important;
+            width: 100% !important;
+        }
+
+        #pos-wrap > div:nth-child(2) > div:first-child {
+            width: 140px !important;
+        }
+
+        #pos-wrap > div:nth-child(2) > div:last-child {
+            width: 240px !important;
+        }
+    }
+
+    @media (max-width: 900px) {
+        #pos-wrap {
+            position: absolute !important;
+            inset: 0 !important;
+            min-height: 100vh;
+        }
+
+        #pos-wrap > div:first-child {
+            flex-wrap: wrap;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 10px 12px;
+        }
+
+        #pos-wrap > div:first-child > div:last-child {
+            width: 100%;
+            justify-content: flex-start;
+            flex-wrap: wrap;
+        }
+
+        #pos-wrap > div:nth-child(2) {
+            flex-wrap: wrap;
+            overflow-y: auto !important;
+        }
+
+        #pos-wrap > div:nth-child(2) > div:first-child {
+            width: 100% !important;
+            max-height: 120px;
+            border-right: 0 !important;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        #products-container {
+            width: 100%;
+            flex: 1 1 100% !important;
+            min-height: 420px;
+        }
+
+        #pos-wrap > div:nth-child(2) > div:last-child {
+            width: 100% !important;
+            min-height: 300px;
+            height: auto !important;
+            border-left: 0 !important;
+            border-top: 1px solid #e5e7eb;
+        }
+    }
 </style>
 @endsection

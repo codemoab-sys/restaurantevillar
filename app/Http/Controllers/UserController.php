@@ -20,9 +20,9 @@ class UserController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            'email' => 'required|email|unique:rest_users,email',
             'password' => 'required|min:6',
-            'role' => 'required|in:admin,cashier,waiter'
+            'role' => 'required|in:admin,cashier,waiter,kitchen'
         ]);
 
         User::create([
@@ -39,8 +39,8 @@ class UserController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,'.$user->id,
-            'role' => 'required|in:admin,cashier,waiter'
+            'email' => 'required|email|unique:rest_users,email,'.$user->id,
+            'role' => 'required|in:admin,cashier,waiter,kitchen'
         ]);
 
         $data = [
@@ -65,7 +65,7 @@ class UserController extends Controller
             return redirect()->back()->with('error', 'No puedes eliminar tu propia cuenta mientras estás conectado.');
         }
 
-        // Opcional: Verificar si tiene ventas asociadas antes de borrar, 
+        // Opcional: Verificar si tiene ventas asociadas antes de borrar,
         // pero por simplicidad permitimos borrar (el historial queda con ID huerfano o se maneja en BD)
         $user->delete();
 

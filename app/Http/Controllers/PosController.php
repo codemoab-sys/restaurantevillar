@@ -98,6 +98,7 @@ class PosController extends Controller
     // --- AGREGAR POR CLIC (Normal) ---
     public function addToOrder(Request $request, Table $table)
     {
+        $this->authorizeTableOrder($table);
         $product = Product::findOrFail($request->product_id);
         $error = $this->checkStockAvailability($product, $table);
         if ($error) {
@@ -111,6 +112,7 @@ class PosController extends Controller
     // --- AGREGAR POR CÓDIGO DE BARRAS / BÚSQUEDA (código, nombre o precio) ---
     public function addByBarcode(Request $request, Table $table)
     {
+        $this->authorizeTableOrder($table);
         $request->validate(['barcode' => 'required']);
 
         $query = trim($request->input('barcode'));
@@ -568,6 +570,20 @@ class PosController extends Controller
     private function authorizePendingDetail(OrderDetail $detail): void
     {
         $this->authorizePendingOrder($detail->order);
+    }
+
+    private function authorizeTableOrder(Table $table): void
+    {
+        $user = Auth::user();
+        abort_unless($user && in_array($user->role, ['admin', 'cashier', 'waiter'], true), 403);
+
+        $order = Order::where('table_id', $table->id)
+            ->where('status', 'pending')
+            ->first();
+
+        if ($order && $user->role === 'waiter') {
+            abort_unless((int) $order->user_id === (int) $user->id, 403);
+        }
     }
 
     private function authorizePendingOrder(Order $order): void

@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="container-fluid">
-    
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold text-dark mb-0"><i class="bi bi-people-fill me-2"></i>Personal</h2>
@@ -57,7 +57,7 @@
                                     <button class="btn btn-sm btn-link text-dark p-0 me-3" onclick="editUser({{ $user }})" title="Editar">
                                         <i class="bi bi-pencil-square fs-5"></i>
                                     </button>
-                                    
+
                                     @if($user->id !== Auth::id())
                                         <form action="{{ route('users.destroy', $user->id) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Estás seguro de eliminar a {{ $user->name }}?');">
                                             @csrf @method('DELETE')
@@ -103,6 +103,7 @@
                         <select name="role" class="form-select">
                             <option value="waiter">Mozo (Solo Pedidos)</option>
                             <option value="cashier">Cajero (Cobros y Gastos)</option>
+                            <option value="kitchen">Cocina (KDS)</option>
                             <option value="admin">Administrador (Total)</option>
                         </select>
                     </div>
@@ -143,6 +144,7 @@
                         <select name="role" id="edit_role" class="form-select">
                             <option value="waiter">Mozo</option>
                             <option value="cashier">Cajero</option>
+                            <option value="kitchen">Cocina</option>
                             <option value="admin">Administrador</option>
                         </select>
                     </div>
