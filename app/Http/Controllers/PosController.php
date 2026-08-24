@@ -338,14 +338,12 @@ class PosController extends Controller
         $this->authorizePendingOrder($order);
         $request->validate([
             'discount' => ['required', 'numeric', 'min:0'],
-            'tip' => ['required', 'numeric', 'min:0'],
         ]);
         $subtotal = $order->details()->get()->sum(fn ($detail) => $detail->price * $detail->quantity);
         if ((float) $request->discount > $subtotal) {
             return back()->with('error', 'El descuento no puede superar el subtotal.');
         }
         $order->discount = $request->input('discount', 0);
-        $order->tip = $request->input('tip', 0);
         $order->save();
         $this->recalculateTotal($order);
         return $this->getCartHtml($order->table()->firstOrFail());
@@ -389,13 +387,32 @@ class PosController extends Controller
         }
         $change = max(0, $received - $order->total);
         $clientId = $request->input('client_id');
-        $clientName = $clientId ? Client::findOrFail($clientId)->name : ($request->input('client_name') ?? 'Público');
+        $client = $clientId ? Client::findOrFail($clientId) : null;
+        $clientName = $client?->name ?: ($request->input('client_name') ?? 'Público');
         $documentType = $request->input('document_type', 'Ticket');
-        $clientDocument = $request->input('client_document');
+        $clientDocument = $client?->document_number ?: $request->input('client_document');
+
+        if (in_array($documentType, ['Boleta', 'Factura'], true)) {
+            $config = new SunatConfig();
+            $seriesKey = $documentType === 'Factura' ? 'factura' : 'boleta';
+
+            if (!$config->isNubefactConfigured()) {
+                return $request->expectsJson()
+                    ? response()->json(['success' => false, 'message' => 'Completa RUC, razón social, ubigeo, RUTA y TOKEN de NubeFact antes de emitir.'], 422)
+                    : redirect()->back()->with('error', 'Completa RUC, razón social, ubigeo, RUTA y TOKEN de NubeFact antes de emitir.');
+            }
+
+            if (!DocumentSeries::where('document_type', $seriesKey)->where('is_active', true)->exists()) {
+                return $request->expectsJson()
+                    ? response()->json(['success' => false, 'message' => 'No hay una serie activa configurada para ' . $documentType . '.'], 422)
+                    : redirect()->back()->with('error', 'No hay una serie activa configurada para ' . $documentType . '.');
+            }
+        }
 
         // Validación específica para Factura (Perú): requiere RUC (11 dígitos) y razón social
         if ($documentType === 'Factura') {
             $doc = preg_replace('/\D/', '', (string) $clientDocument);
+            $clientDocument = $doc;
             if (strlen($doc) !== 11) {
                 return $request->expectsJson()
                     ? response()->json(['success' => false, 'message' => 'Para emitir Factura el cliente debe tener RUC de 11 dígitos.'], 422)
@@ -406,6 +423,12 @@ class PosController extends Controller
                     ? response()->json(['success' => false, 'message' => 'Para emitir Factura debe indicar la razón social del cliente.'], 422)
                     : redirect()->back()->with('error', 'Para emitir Factura debe indicar la razón social del cliente.');
             }
+                $clientAddress = (string) ($client?->address ?? '');
+                if (trim($clientAddress) === '') {
+                    return $request->expectsJson()
+                        ? response()->json(['success' => false, 'message' => 'Para emitir Factura debe indicar la dirección del cliente.'], 422)
+                        : redirect()->back()->with('error', 'Para emitir Factura debe indicar la dirección del cliente.');
+                }
         }
 
         DB::transaction(function() use ($order, $method, $received, $change, $request, $clientId, $clientName, $documentType, $clientDocument) {
@@ -538,7 +561,7 @@ class PosController extends Controller
     private function recalculateTotal(Order $order)
     {
         $subtotal = $order->details->sum(fn($d) => $d->price * $d->quantity);
-        $total = ($subtotal - ($order->discount ?? 0)) + ($order->tip ?? 0);
+        $total = $subtotal - ($order->discount ?? 0);
         $order->update(['total' => max(0, $total)]);
     }
 

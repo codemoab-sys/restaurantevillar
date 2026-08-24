@@ -24,21 +24,21 @@
         .text-end { text-align: right; }
         .fw-bold { font-weight: bold; }
         .uppercase { text-transform: uppercase; }
-        
+
         .header { margin-bottom: 10px; border-bottom: 1px dashed #000; padding-bottom: 5px; }
         .footer { margin-top: 10px; border-top: 1px dashed #000; padding-top: 5px; font-size: 10px; }
-        
+
         table { width: 100%; border-collapse: collapse; margin-top: 5px; }
         td, th { vertical-align: top; padding: 2px 0; }
-        
+
         /* Columnas */
         .qty { width: 10%; text-align: left; }
         .desc { width: 60%; text-align: left; }
         .price { width: 30%; text-align: right; }
-        
+
         .totals { margin-top: 10px; border-top: 1px solid #000; padding-top: 5px; }
         .row { display: flex; justify-content: space-between; margin-bottom: 2px; }
-        
+
         /* Ocultar botones al imprimir */
         @media print {
             .no-print { display: none; }
@@ -55,17 +55,17 @@
             <img src="{{ asset('storage/'.$settings['company_logo']) }}" style="max-width: 50px; filter: grayscale(100%); margin-bottom: 5px;">
             <br>
         @endif
-        
+
         <div class="fw-bold fs-5 uppercase" style="font-size: 14px;">{{ $settings['company_name'] ?? 'MI RESTAURANTE' }}</div>
         <div>{{ $settings['company_address'] ?? 'Dirección del Local' }}</div>
         <div>Tel: {{ $settings['company_phone'] ?? '---' }}</div>
         <div style="margin-top: 5px;">{{ now()->format('d/m/Y H:i') }}</div>
         <div>TICKET: #{{ str_pad($order->id, 6, '0', STR_PAD_LEFT) }}</div>
-        
+
         @if($order->client_name && $order->client_name != 'Público')
             <div style="margin-top: 3px; font-weight: bold;">Cli: {{ Str::limit($order->client_name, 20) }}</div>
         @endif
-        
+
         <div class="fw-bold" style="margin-top: 3px; font-size: 13px;">MESA: {{ $order->table->name ?? 'BARRA' }}</div>
     </div>
 
@@ -83,8 +83,8 @@
                     <td class="qty">{{ $detail->quantity }}</td>
                     <td class="desc">
                         {{ $detail->product->name }}
-                        @if($detail->note) 
-                            <br><i style="font-size: 10px;">({{ $detail->note }})</i> 
+                        @if($detail->note)
+                            <br><i style="font-size: 10px;">({{ $detail->note }})</i>
                         @endif
                     </td>
                     <td class="price">{{ number_format($detail->quantity * $detail->price, 2) }}</td>
@@ -96,9 +96,9 @@
     <div class="totals">
         <div class="row">
             <span>Subtotal:</span>
-            <span>{{ $settings['currency_symbol'] ?? 'S/' }} {{ number_format($order->total - ($order->tip ?? 0) + ($order->discount ?? 0), 2) }}</span>
+            <span>{{ $settings['currency_symbol'] ?? 'S/' }} {{ number_format($order->total + ($order->discount ?? 0), 2) }}</span>
         </div>
-        
+
         @if($order->discount > 0)
         <div class="row">
             <span>Descuento:</span>
@@ -106,18 +106,11 @@
         </div>
         @endif
 
-        @if($order->tip > 0)
-        <div class="row">
-            <span>Propina:</span>
-            <span>{{ number_format($order->tip, 2) }}</span>
-        </div>
-        @endif
-
         <div class="row fw-bold" style="font-size: 16px; margin-top: 5px; border-top: 1px dashed #000; padding-top: 5px;">
             <span>TOTAL A PAGAR:</span>
             <span>{{ $settings['currency_symbol'] ?? 'S/' }} {{ number_format($order->total, 2) }}</span>
         </div>
-        
+
         <div class="row" style="margin-top: 5px; font-size: 10px;">
             <span>F. PAGO: {{ strtoupper($order->payment_method) }}</span>
         </div>

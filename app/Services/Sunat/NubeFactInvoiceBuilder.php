@@ -29,18 +29,34 @@ class NubeFactInvoiceBuilder
 
         // ═══ ITEMS ═══════════════════════════════════════════════════
         $items          = [];
+        $grossSubtotal  = 0.0;
         $totalGravada   = 0.0;
         $totalIgv       = 0.0;
         $totalExonerada = 0.0;
         $totalInafecta  = 0.0;
 
         foreach ($order->details as $line) {
+            $grossSubtotal += (float) $line->price * (float) $line->quantity;
+        }
+
+        $discountGross = min(max((float) ($order->discount ?? 0), 0), $grossSubtotal);
+        $discountNet = round($discountGross / $denom, 2);
+        $remainingDiscountNet = $discountNet;
+        $lastLineIndex = $order->details->count() - 1;
+
+        foreach ($order->details as $lineIndex => $line) {
             $product = $line->product;
 
             $precioVentaUnit = (float) $line->price;
             $valorUnit       = round($precioVentaUnit / $denom, 6);
             $cantidad        = (float) $line->quantity;
-            $valorVenta      = round($valorUnit * $cantidad, 2);
+            $lineGross       = $precioVentaUnit * $cantidad;
+            $lineDiscount    = $lineIndex === $lastLineIndex
+                ? $remainingDiscountNet
+                : round($discountNet * ($lineGross / max($grossSubtotal, 1)), 2);
+            $lineDiscount    = min($lineDiscount, $remainingDiscountNet);
+            $remainingDiscountNet = round($remainingDiscountNet - $lineDiscount, 2);
+            $valorVenta      = round(($valorUnit * $cantidad) - $lineDiscount, 2);
             $igvLinea        = round($valorVenta * $igvFactor, 2);
             $subtotalLinea   = round($valorVenta + $igvLinea, 2);
 
@@ -54,10 +70,9 @@ class NubeFactInvoiceBuilder
                 'cantidad'         => $cantidad,
                 'valor_unitario'   => $valorUnit,
                 'precio_unitario'  => round($precioVentaUnit, 2),
-                'descuento'        => '',
+                'descuento'        => $lineDiscount,
                 'subtotal'         => $valorVenta,
                 'tipo_de_igv'      => 1,          // 1 = Gravado - Operación Onerosa
-                'igv'              => $igvLinea,
                 'total'            => $subtotalLinea,
                 'anticipo_regularizacion' => false,
                 'anticipo_documento_serie' => '',
@@ -126,7 +141,6 @@ class NubeFactInvoiceBuilder
             'descuento_global'           => '',
             'total_descuento'            => '',
             'total_anticipo'             => '',
-            'total_gravada'              => $totalGravada,
             'total_inafecta'             => $totalInafecta,
             'total_exonerada'            => $totalExonerada,
             'total_igv'                  => $totalIgv,

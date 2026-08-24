@@ -8,6 +8,7 @@ use App\Models\OrderDetail;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Table;
+use App\Models\Client;
 use App\Services\Sunat\SunatConfig;
 use App\Services\Sunat\SunatService;
 use Illuminate\Console\Command;
@@ -148,8 +149,18 @@ class SunatTestCommand extends Command
 
         $documentType = $isFactura ? 'Factura' : 'Boleta';
         $seriesKey    = $isFactura ? 'factura' : 'boleta';
+        $testClient = $isFactura
+            ? Client::firstOrCreate(
+                ['document_number' => '20123456789'],
+                [
+                    'name' => 'EMPRESA PRUEBA SAC',
+                    'document_type' => 'RUC',
+                    'address' => 'AV. PRUEBA 123 LIMA',
+                ]
+            )
+            : null;
 
-        return DB::transaction(function () use ($products, $user, $table, $documentType, $seriesKey) {
+        return DB::transaction(function () use ($products, $user, $table, $documentType, $seriesKey, $testClient) {
             // Reserva atómica de serie/correlativo
             $next = DocumentSeries::next($seriesKey);
 
@@ -166,6 +177,7 @@ class SunatTestCommand extends Command
             $order = Order::create([
                 'table_id'         => $table->id,
                 'user_id'          => $user->id,
+                'client_id'        => $testClient?->id,
                 'status'           => 'completed',
                 'total'            => $total,
                 'document_type'    => $documentType,

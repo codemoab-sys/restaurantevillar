@@ -85,13 +85,6 @@
             </div>
         @endif
 
-        @if($order->tip > 0)
-            <div class="row mb-1 text-success fw-bold" style="font-size: 0.8rem;">
-                <div class="col-6">Propina:</div>
-                <div class="col-6 text-end">+{{ number_format($order->tip, 2) }}</div>
-            </div>
-        @endif
-
         <div class="d-flex justify-content-between align-items-center mb-2 mt-2 border-top pt-2">
             <h5 class="mb-0 fw-bold text-dark fs-6">TOTAL:</h5>
             <h3 class="mb-0 fw-bold text-primary fs-4">

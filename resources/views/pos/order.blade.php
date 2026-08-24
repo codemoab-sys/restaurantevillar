@@ -290,10 +290,6 @@ foreach($categories as $cat) {
                     <label class="form-label small fw-bold text-muted">Descuento Global</label>
                     <input type="number" step="0.01" id="inputDiscount" class="form-control" value="{{ $order ? $order->discount : 0 }}" onclick="this.select()">
                 </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-muted">Propina</label>
-                    <input type="number" step="0.01" id="inputTip" class="form-control" value="{{ $order ? $order->tip : 0 }}" onclick="this.select()">
-                </div>
             </div>
             <div class="modal-footer p-1">
                 <button type="button" class="btn btn-primary w-100 btn-sm fw-bold" onclick="applyOptions()">Aplicar Cambios</button>
@@ -556,14 +552,13 @@ foreach($categories as $cat) {
 
     window.applyOptions = function() {
         var discount = document.getElementById('inputDiscount').value;
-        var tip = document.getElementById('inputTip').value;
         var modal = bootstrap.Modal.getInstance(document.getElementById('optionsModal'));
         modal.hide();
 
         fetch(`{{ url('/pos/order') }}/{{ $order ? $order->id : 0 }}/discount`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-            body: JSON.stringify({ discount: discount, tip: tip })
+            body: JSON.stringify({ discount: discount })
         }).then(r => r.text()).then(html => {
             document.getElementById('cart-container').innerHTML = html;
             updateCheckoutTotal();
