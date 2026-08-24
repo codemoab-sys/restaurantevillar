@@ -19,7 +19,7 @@
             </div>
             <div class="card-body px-4 pb-4">
                 <p class="small text-muted mb-4">Genera un archivo .sql descargable que contiene toda la configuración, productos, ventas y movimientos. Recomendado antes de cualquier cambio mayor.</p>
-                
+
                 <form action="{{ route('system.backup') }}" method="POST">
                     @csrf
                     <button type="submit" class="btn btn-primary w-100 fw-bold py-2 rounded-3">
@@ -42,8 +42,8 @@
             </div>
             <div class="card-body px-4 pb-4">
                 <p class="small text-muted mb-4">Sube un archivo .sql generado previamente para volver a un estado anterior. <strong>Advertencia:</strong> Esto reemplazará todos los datos actuales.</p>
-                
-                <form action="{{ route('system.restore') }}" method="POST" enctype="multipart/form-data" onsubmit="return confirm('ATENCIÓN: Se borrarán todos los datos actuales y se reemplazarán por el archivo seleccionado. ¿Deseas continuar?');">
+
+                <form action="{{ route('system.restore') }}" method="POST" enctype="multipart/form-data" id="restoreSystemForm">
                     @csrf
                     <div class="mb-3">
                         <input type="file" name="backup_file" class="form-control form-control-sm border-warning border-opacity-25" accept=".sql" required>
@@ -71,7 +71,14 @@
             </div>
             <div class="card-body px-4 pb-4">
                 <p class="small text-muted mb-3">Limpia el sistema de datos de prueba. Se borrarán órdenes, gastos, cajas y reservas, manteniendo productos y configuración.</p>
-                
+
+                @if($productionPrepared)
+                    <div class="alert alert-success py-2 small">
+                        <i class="bi bi-check-circle-fill me-1"></i>
+                        El sistema ya está preparado para producción.
+                    </div>
+                @endif
+
                 <div class="bg-danger bg-opacity-10 rounded-3 p-2 mb-3 border border-danger border-opacity-25">
                     <ul class="mb-0 small text-danger fw-medium list-unstyled">
                         <li><i class="bi bi-check2-circle me-2"></i>{{ $counts['orders'] }} Órdenes</li>
@@ -80,12 +87,12 @@
                     </ul>
                 </div>
 
-                <form action="{{ route('system.reset') }}" method="POST" onsubmit="return confirm('¿ESTÁS 100% SEGURO? Esta acción es irreversible.');">
+                <form action="{{ route('system.reset') }}" method="POST" id="resetSystemForm">
                     @csrf
                     <div class="mb-3">
                         <input type="password" name="password" class="form-control form-control-sm border-danger border-opacity-25" placeholder="Confirma tu contraseña" required>
                     </div>
-                    <button type="submit" class="btn btn-danger w-100 fw-bold py-2 rounded-3">
+                    <button type="submit" class="btn btn-danger w-100 fw-bold py-2 rounded-3" {{ $productionPrepared ? 'disabled' : '' }}>
                         <i class="bi bi-exclamation-octagon me-2"></i>Borrar Datos de Prueba
                     </button>
                 </form>
@@ -104,3 +111,49 @@
     }
 </style>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const confirmDangerousAction = function (form, options) {
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+
+                Swal.fire({
+                    icon: 'warning',
+                    title: options.title,
+                    text: options.text,
+                    showCancelButton: true,
+                    confirmButtonColor: options.confirmButtonColor,
+                    confirmButtonText: options.confirmButtonText,
+                    cancelButtonColor: '#6c757d',
+                    cancelButtonText: 'Cancelar',
+                    reverseButtons: true
+                }).then(function (result) {
+                    if (result.isConfirmed) form.submit();
+                });
+            });
+        };
+
+        const restoreForm = document.getElementById('restoreSystemForm');
+        if (restoreForm) {
+            confirmDangerousAction(restoreForm, {
+                title: '¿Restaurar el sistema?',
+                text: 'Se reemplazarán todos los datos actuales por el respaldo seleccionado.',
+                confirmButtonColor: '#ffc107',
+                confirmButtonText: 'Sí, restaurar'
+            });
+        }
+
+        const resetForm = document.getElementById('resetSystemForm');
+        if (resetForm) {
+            confirmDangerousAction(resetForm, {
+                title: '¿Reiniciar el sistema?',
+                text: 'Esta acción es irreversible: se borrarán las ventas, reservas, gastos y stock.',
+                confirmButtonColor: '#dc3545',
+                confirmButtonText: 'Sí, reiniciar'
+            });
+        }
+    });
+</script>
+@endpush

@@ -21,6 +21,8 @@ class NubeFactInvoiceBuilder
      */
     public function build(Order $order): array
     {
+        $order->loadMissing('client');
+
         $isFactura = $order->document_type === 'Factura';
         $igvFactor = $this->config->igvFactor(); // 0.18
         $denom     = 1 + $igvFactor;             // 1.18
@@ -72,18 +74,31 @@ class NubeFactInvoiceBuilder
         $monedaCodigo = 1; // 1 = Soles
 
         // ═══ DOCUMENTO DEL CLIENTE ══════════════════════════════════
+        $client = $order->client;
+
         if ($isFactura) {
             $clienteTipoDoc = 6;  // RUC
-            $clienteNumDoc  = $order->client_document ?: '20000000001';
-            $clienteNombre  = $order->client_name ?: 'CLIENTE GENERAL';
+            $clienteNumDoc  = $order->client_document ?: ($client?->document_number ?? '');
+            $clienteNombre  = $order->client_name ?: ($client?->name ?? '');
         } else {
             // Boleta
-            $doc  = trim((string) $order->client_document);
+            $doc  = trim((string) ($order->client_document ?: $client?->document_number));
             $tipo = (strlen($doc) === 8) ? 1 : '-'; // 1 = DNI, - = Varios
             $clienteTipoDoc = $tipo;
             $clienteNumDoc  = $doc ?: '-';
-            $clienteNombre  = $order->client_name ?: 'CLIENTE VARIOS';
+            $clienteNombre  = $order->client_name ?: ($client?->name ?? 'CLIENTE VARIOS');
         }
+
+        $clienteDireccion = trim((string) ($client?->address ?? ''));
+
+        if ($isFactura && (!preg_match('/^\d{11}$/', $clienteNumDoc) || $clienteNombre === '' || $clienteDireccion === '')) {
+            throw new \RuntimeException('La factura requiere RUC, razón social y dirección del cliente.');
+        }
+
+        if ($clienteDireccion === '') {
+            $clienteDireccion = $this->config->direccion();
+        }
+        $clienteEmail = $client?->email ?? '';
 
         // ═══ FECHA ══════════════════════════════════════════════════
         $fechaEmision = now()->format('d-m-Y');
@@ -94,12 +109,13 @@ class NubeFactInvoiceBuilder
             'tipo_de_comprobante'        => $isFactura ? 1 : 2, // 1=Factura, 2=Boleta
             'serie'                      => $order->serie,
             'numero'                     => (int) $order->correlativo,
+            'codigo_unico'               => ($isFactura ? '01' : '03') . '-' . $order->serie . '-' . $order->correlativo,
             'sunat_transaction'          => 1,  // 1 = Venta interna
             'cliente_tipo_de_documento'  => $clienteTipoDoc,
             'cliente_numero_de_documento' => $clienteNumDoc,
             'cliente_denominacion'       => $clienteNombre,
-            'cliente_direccion'          => $this->config->direccion(),
-            'cliente_email'              => '',
+            'cliente_direccion'          => $clienteDireccion,
+            'cliente_email'              => $clienteEmail,
             'cliente_email_1'            => '',
             'cliente_email_2'            => '',
             'fecha_de_emision'           => $fechaEmision,

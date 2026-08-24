@@ -10,29 +10,54 @@ class TableController extends Controller
 {
     public function index()
     {
-        $areas = Area::with('tables')->get();
+        $areas = Area::with('tables')->orderByDesc('is_active')->orderBy('name')->get();
         return view('tables.index', compact('areas'));
     }
 
     public function storeArea(Request $request)
     {
         $request->validate(['name' => 'required|string|max:100']);
-        Area::create($request->only('name'));
+        Area::create([
+            'name' => trim($request->name),
+            'is_active' => true,
+        ]);
         return redirect()->back()->with('success', 'Zona creada.');
     }
 
-    public function destroyArea(Area $area)
+    public function updateArea(Request $request, Area $area)
     {
-        $area->tables()->delete();
-        $area->delete();
-        return redirect()->back()->with('success', 'Zona eliminada.');
+        $request->validate([
+            'name' => 'required|string|max:100|unique:rest_areas,name,' . $area->id,
+        ]);
+
+        $area->update(['name' => trim($request->name)]);
+
+        return redirect()->back()->with('success', 'Zona actualizada.');
+    }
+
+    public function deactivateArea(Area $area)
+    {
+        if ($area->tables()->whereHas('orders', function ($query) {
+            $query->where('status', 'pending');
+        })->exists()) {
+            return redirect()->back()->with('error', 'No puedes desactivar una zona con órdenes pendientes.');
+        }
+
+        $area->update(['is_active' => false]);
+        return redirect()->back()->with('success', 'Zona desactivada. Sus mesas se conservaron.');
+    }
+
+    public function activateArea(Area $area)
+    {
+        $area->update(['is_active' => true]);
+        return redirect()->back()->with('success', 'Zona reactivada.');
     }
 
     public function storeTable(Request $request)
     {
         $request->validate([
             'name' => 'required|string|max:100',
-            'area_id' => 'required|exists:rest_areas,id'
+            'area_id' => 'required|exists:rest_areas,id,is_active,1'
         ]);
 
         Table::create([

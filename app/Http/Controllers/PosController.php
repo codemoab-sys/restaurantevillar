@@ -34,7 +34,7 @@ class PosController extends Controller
                   ->where('reservation_time', '>=', Carbon::now()->subHours(2))
                   ->orderBy('reservation_time', 'asc');
             }]);
-        }])->get();
+        }])->where('is_active', true)->get();
 
         $currency = Setting::where('key', 'currency_symbol')->value('value') ?? 'S/';
 

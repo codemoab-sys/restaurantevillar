@@ -26,6 +26,40 @@
         @csrf
 
         <div class="accordion" id="webAccordion">
+        <div class="accordion-item mb-3 border rounded-4 shadow-sm overflow-hidden">
+            <h2 class="accordion-header">
+                <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#colAppearance">
+                    <i class="bi bi-palette-fill me-2 text-primary"></i> Apariencia de la web
+                </button>
+            </h2>
+            <div id="colAppearance" class="accordion-collapse collapse show" data-bs-parent="#webAccordion">
+                <div class="accordion-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Color de fondo de página</label>
+                            <div class="input-group">
+                                <input type="color" name="web_page_bg" class="form-control form-control-color" value="{{ $settings['web_page_bg'] ?? '#ffffff' }}">
+                                <span class="input-group-text">Fondo general</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Color de cabecera</label>
+                            <div class="input-group">
+                                <input type="color" name="web_header_bg" class="form-control form-control-color" value="{{ $settings['web_header_bg'] ?? '#ffffff' }}">
+                                <span class="input-group-text">Barra superior</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Color del texto del nombre</label>
+                            <div class="input-group">
+                                <input type="color" name="brand_text_color" class="form-control form-control-color" value="{{ $settings['brand_text_color'] ?? '#1e1e2d' }}">
+                                <span class="input-group-text">Logo + nombre</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
             {{-- ═══════════ HERO ═══════════ --}}
             <div class="accordion-item mb-3 border rounded-4 shadow-sm overflow-hidden">
@@ -281,4 +315,60 @@
         </div>
     </form>
 </div>
+
+<style>
+    [data-theme="dark"] .accordion-item,
+    [data-theme="dark"] .accordion-body,
+    [data-theme="dark"] .accordion-button,
+    [data-theme="dark"] .bg-light,
+    [data-theme="dark"] .form-control,
+    [data-theme="dark"] .form-select,
+    [data-theme="dark"] .input-group-text,
+    [data-theme="dark"] .border,
+    [data-theme="dark"] .rounded-3,
+    [data-theme="dark"] .rounded-4 {
+        background-color: #111827 !important;
+        color: #e5e7eb !important;
+        border-color: rgba(148, 163, 184, 0.28) !important;
+    }
+
+    [data-theme="dark"] .accordion-button {
+        background: #111827 !important;
+        color: #f9fafb !important;
+        box-shadow: none !important;
+    }
+
+    [data-theme="dark"] .accordion-button:not(.collapsed) {
+        background: #1f2937 !important;
+        color: #fff !important;
+    }
+
+    [data-theme="dark"] .form-control,
+    [data-theme="dark"] .form-select,
+    [data-theme="dark"] .input-group-text {
+        background-color: #0f172a !important;
+        border-color: rgba(148, 163, 184, 0.28) !important;
+        color: #f3f4f6 !important;
+    }
+
+    [data-theme="dark"] .form-control::placeholder,
+    [data-theme="dark"] .text-muted,
+    [data-theme="dark"] small,
+    [data-theme="dark"] .text-secondary,
+    [data-theme="dark"] .text-primary,
+    [data-theme="dark"] .text-dark {
+        color: #cbd5e1 !important;
+    }
+
+    [data-theme="dark"] .form-check-input {
+        background-color: #0f172a;
+        border-color: rgba(148, 163, 184, 0.35);
+    }
+
+    [data-theme="dark"] .btn-outline-secondary {
+        background: rgba(255,255,255,0.03);
+        border-color: rgba(148, 163, 184, 0.35);
+        color: #f3f4f6;
+    }
+</style>
 @endsection

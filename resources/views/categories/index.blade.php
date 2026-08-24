@@ -42,10 +42,10 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <form action="{{ route('categories.destroy', $category) }}" method="POST" class="d-inline">
+                                    <form action="{{ route('categories.destroy', $category) }}" method="POST" class="d-inline category-delete-form">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="if(confirm('¿Estás seguro de eliminar esta categoría?')) this.closest('form').submit();">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </form>
@@ -93,3 +93,46 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.querySelectorAll('.category-delete-form').forEach((form) => {
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            Swal.fire({
+                icon: 'warning',
+                title: '¿Eliminar categoría?',
+                text: 'Esta acción no se puede deshacer.',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+        });
+    });
+
+    @if(session('success'))
+        Swal.fire({
+            icon: 'success',
+            title: 'Categorías',
+            text: @json(session('success')),
+            timer: 2200,
+            showConfirmButton: false
+        });
+    @endif
+
+    @if(session('error'))
+        Swal.fire({
+            icon: 'error',
+            title: 'No se pudo completar la operación',
+            text: @json(session('error'))
+        });
+    @endif
+</script>
+@endpush

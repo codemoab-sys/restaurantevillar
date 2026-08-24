@@ -21,7 +21,7 @@ class NubeFactCreditNoteBuilder
      */
     public function build(CreditNote $cn): array
     {
-        $order = $cn->order()->with('details.product')->first();
+        $order = $cn->order()->with('details.product', 'client')->first();
         if (!$order) {
             throw new \RuntimeException('La nota de crédito no tiene una orden asociada.');
         }
@@ -71,17 +71,28 @@ class NubeFactCreditNoteBuilder
         $totalVenta   = round($totalGravada + $totalIgv, 2);
 
         // ═══ DOCUMENTO DEL CLIENTE ══════════════════════════════════
+        $client = $order->client;
+
         if ($isFactura) {
             $clienteTipoDoc = 6;
-            $clienteNumDoc  = $order->client_document ?: '20000000001';
-            $clienteNombre  = $order->client_name ?: 'CLIENTE GENERAL';
+            $clienteNumDoc  = $order->client_document ?: ($client?->document_number ?? '');
+            $clienteNombre  = $order->client_name ?: ($client?->name ?? '');
         } else {
-            $doc  = trim((string) $order->client_document);
+            $doc  = trim((string) ($order->client_document ?: $client?->document_number));
             $tipo = (strlen($doc) === 8) ? 1 : '-';
             $clienteTipoDoc = $tipo;
             $clienteNumDoc  = $doc ?: '-';
-            $clienteNombre  = $order->client_name ?: 'CLIENTE VARIOS';
+            $clienteNombre  = $order->client_name ?: ($client?->name ?? 'CLIENTE VARIOS');
         }
+
+        $clienteDireccion = trim((string) ($client?->address ?? ''));
+        if ($isFactura && (!preg_match('/^\d{11}$/', $clienteNumDoc) || $clienteNombre === '' || $clienteDireccion === '')) {
+            throw new \RuntimeException('La nota de crédito de factura requiere RUC, razón social y dirección del cliente.');
+        }
+        if ($clienteDireccion === '') {
+            $clienteDireccion = $this->config->direccion();
+        }
+        $clienteEmail = $client?->email ?? '';
 
         // ═══ FECHA ══════════════════════════════════════════════════
         $fechaEmision = now()->format('d-m-Y');
@@ -92,12 +103,13 @@ class NubeFactCreditNoteBuilder
             'tipo_de_comprobante'        => 3,  // 3 = Nota de Crédito
             'serie'                      => $cn->serie,
             'numero'                     => (int) $cn->correlativo,
+            'codigo_unico'               => '07-' . $cn->serie . '-' . $cn->correlativo,
             'sunat_transaction'          => 1,
             'cliente_tipo_de_documento'  => $clienteTipoDoc,
             'cliente_numero_de_documento' => $clienteNumDoc,
             'cliente_denominacion'       => $clienteNombre,
-            'cliente_direccion'          => $this->config->direccion(),
-            'cliente_email'              => '',
+            'cliente_direccion'          => $clienteDireccion,
+            'cliente_email'              => $clienteEmail,
             'cliente_email_1'            => '',
             'cliente_email_2'            => '',
             'fecha_de_emision'           => $fechaEmision,

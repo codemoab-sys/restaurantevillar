@@ -18,13 +18,12 @@ use App\Models\OrderDetail;
 use App\Models\Reservation;
 use App\Models\Expense;
 use App\Models\InventoryLog;
-use Illuminate\Support\Str;
 
 class DemoDataSeeder extends Seeder
 {
     public function run()
     {
-        if (! filter_var(env('ALLOW_DEMO_DATA', false), FILTER_VALIDATE_BOOL)) {
+        if (! config('demo.allow_data', false)) {
             return;
         }
 

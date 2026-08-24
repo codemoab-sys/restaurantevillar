@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Order;
 use App\Models\Reservation;
 use App\Models\InventoryLog;
+use App\Models\Setting;
 
 class SystemController extends Controller
 {
@@ -18,15 +19,21 @@ class SystemController extends Controller
             'reservations' => Reservation::count(),
             'logs' => InventoryLog::count(),
         ];
-        return view('system.index', compact('counts'));
+        $productionPrepared = Setting::where('key', 'production_prepared')->value('value') === '1';
+
+        return view('system.index', compact('counts', 'productionPrepared'));
     }
 
     public function resetData(Request $request)
     {
+        if (Setting::where('key', 'production_prepared')->value('value') === '1') {
+            return back()->with('error', 'El sistema ya fue preparado para producción. Esta acción solo puede ejecutarse una vez.');
+        }
+
         $request->validate(['password' => 'required']);
 
         // Verificación de seguridad simple: La contraseña debe ser la del usuario actual
-        if (!password_verify($request->password, auth()->user()->password)) {
+        if (!password_verify($request->password, $request->user()->password)) {
             return back()->with('error', 'Contraseña incorrecta. No se realizaron cambios.');
         }
 
@@ -44,7 +51,12 @@ class SystemController extends Controller
 
             // 3. Borrar Kardex
             DB::table('rest_inventory_logs')->truncate();
-            DB::table('rest_products')->update(['stock' => 0]); 
+            DB::table('rest_products')->update(['stock' => 0]);
+
+            Setting::updateOrCreate(
+                ['key' => 'production_prepared'],
+                ['value' => '1']
+            );
 
             DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
@@ -91,13 +103,13 @@ class SystemController extends Controller
             'password' => 'required'
         ]);
 
-        if (!password_verify($request->password, auth()->user()->password)) {
+        if (!password_verify($request->password, $request->user()->password)) {
             return back()->with('error', 'Contraseña incorrecta. No se restauró el sistema.');
         }
 
         try {
             $file = $request->file('backup_file');
-            
+
             // Verificación simple de que es un archivo SQL
             if ($file->getClientOriginalExtension() !== 'sql') {
                 return back()->with('error', 'El archivo debe ser un .sql válido.');
@@ -109,7 +121,7 @@ class SystemController extends Controller
             $dbHost = env('DB_HOST', '127.0.0.1');
 
             $filePath = $file->getRealPath();
-            
+
             $passwordParam = empty($dbPass) ? '' : '--password="' . $dbPass . '"';
             // Usa < para inyectar el archivo SQL en la BD
             $command = "mysql --user=\"{$dbUser}\" {$passwordParam} --host=\"{$dbHost}\" {$dbName} < \"{$filePath}\"";

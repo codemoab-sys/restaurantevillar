@@ -8,7 +8,7 @@
             <h2 class="fw-bold text-dark mb-0">Nuevo Producto</h2>
         </div>
 
-        <form action="{{ route('products.store') }}" method="POST" enctype="multipart/form-data" class="row g-4">
+        <form id="productCreateForm" action="{{ route('products.store') }}" method="POST" enctype="multipart/form-data" class="row g-4">
             @csrf
 
             <div class="col-md-8">
@@ -130,7 +130,7 @@
                         </div>
                     </div>
                     <div class="card-footer bg-white border-0 text-end">
-                        <button type="submit" class="btn btn-primary fw-bold w-100">
+                        <button type="submit" class="btn btn-primary fw-bold w-100" id="saveProductButton">
                             <i class="bi bi-save me-2"></i> Guardar Producto
                         </button>
                     </div>
@@ -141,6 +141,18 @@
 </div>
 
 <script>
+    document.getElementById('productCreateForm')?.addEventListener('submit', function (event) {
+        if (this.dataset.submitting === 'true') {
+            event.preventDefault();
+            return;
+        }
+
+        this.dataset.submitting = 'true';
+        const button = document.getElementById('saveProductButton');
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Guardando...';
+    });
+
     function addIngredient() {
         let container = document.getElementById('ingredients-list');
         let template = document.getElementById('ingredient-select-template').innerHTML;

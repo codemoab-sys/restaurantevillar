@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CreditNote;
-use App\Models\DailySummary;
 use App\Models\Order;
 use App\Services\Sunat\SunatService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -105,6 +104,10 @@ class BillingController extends Controller
      */
     public function downloadXml(Order $order)
     {
+        if (!$order->xml_path) {
+            $this->refreshDocumentLinks($order);
+        }
+
         return $this->streamSunatFile($order->xml_path, 'application/xml');
     }
 
@@ -113,7 +116,58 @@ class BillingController extends Controller
      */
     public function downloadCdr(Order $order)
     {
+        if (!$order->cdr_path) {
+            $this->refreshDocumentLinks($order);
+        }
+
         return $this->streamSunatFile($order->cdr_path, 'application/zip');
+    }
+
+    /**
+     * Consulta NubeFact solo cuando falta el enlace solicitado.
+     */
+    private function refreshDocumentLinks(Order $order): void
+    {
+        abort_unless(in_array($order->document_type, ['Boleta', 'Factura']), 404);
+
+        try {
+            $response = (new \App\Services\Sunat\SunatService())->queryDocument(
+                $order->document_type === 'Factura' ? '1' : '2',
+                $order->serie,
+                (int) $order->correlativo
+            );
+
+            if (!empty($response['enlace_del_pdf'])) {
+                $order->pdf_path = $response['enlace_del_pdf'];
+            } elseif (!empty($response['enlace'])) {
+                $order->pdf_path = rtrim($response['enlace'], '/') . '.pdf';
+            }
+            if (!empty($response['enlace_del_xml'])) {
+                $order->xml_path = $response['enlace_del_xml'];
+            } elseif (!empty($response['enlace'])) {
+                $order->xml_path = rtrim($response['enlace'], '/') . '.xml';
+            }
+            if (!empty($response['enlace_del_cdr'])) {
+                $order->cdr_path = $response['enlace_del_cdr'];
+            } elseif (!empty($response['enlace'])) {
+                $order->cdr_path = rtrim($response['enlace'], '/') . '.cdr';
+            }
+
+            if (array_key_exists('aceptada_por_sunat', $response)) {
+                $order->sunat_status = $response['aceptada_por_sunat'] === true
+                    ? 'ACCEPTED'
+                    : $order->sunat_status;
+            }
+            $order->sunat_code = $response['sunat_responsecode'] ?? $order->sunat_code;
+            $order->sunat_description = $response['sunat_description'] ?? $order->sunat_description;
+            $order->hash = $response['codigo_hash'] ?? $order->hash;
+            $order->save();
+        } catch (\Throwable $e) {
+            Log::warning('No se pudieron consultar los enlaces del comprobante', [
+                'order_id' => $order->id,
+                'msg' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -121,7 +175,29 @@ class BillingController extends Controller
      */
     private function streamSunatFile(?string $relPath, string $mime): Response
     {
-        if (!$relPath || !Storage::disk('local')->exists($relPath)) {
+        if (!$relPath) {
+            abort(404, 'Archivo no encontrado.');
+        }
+
+        if (filter_var($relPath, FILTER_VALIDATE_URL)) {
+            $urlHost = parse_url($relPath, PHP_URL_HOST);
+            $rutaHost = parse_url((new \App\Services\Sunat\SunatConfig())->nubefactRuta(), PHP_URL_HOST);
+            $allowedHost = is_string($urlHost)
+                && ($urlHost === $rutaHost || str_ends_with($urlHost, '.nubefact.com'));
+
+            abort_unless($allowedHost, 404, 'Archivo no encontrado.');
+
+            $remote = Http::timeout(30)->get($relPath);
+            abort_unless($remote->successful(), 404, 'Archivo no encontrado.');
+
+            return response()->streamDownload(
+                fn () => print($remote->body()),
+                basename(parse_url($relPath, PHP_URL_PATH) ?: 'comprobante'),
+                ['Content-Type' => $mime]
+            );
+        }
+
+        if (!Storage::disk('local')->exists($relPath)) {
             abort(404, 'Archivo no encontrado.');
         }
 

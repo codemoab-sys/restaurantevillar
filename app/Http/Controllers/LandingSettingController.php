@@ -27,7 +27,7 @@ class LandingSettingController extends Controller
         foreach ($data as $key => $value) {
             if (is_null($value)) continue;
             if (str_ends_with($key, '_remove')) continue;
-            if (!str_starts_with($key, 'web_')) continue;
+            if (!str_starts_with($key, 'web_') && $key !== 'brand_text_color') continue;
             if (is_array($value)) $value = json_encode(array_values($value));
             Setting::updateOrCreate(['key' => $key], ['value' => $value]);
         }

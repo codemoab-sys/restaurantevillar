@@ -3,6 +3,7 @@
 namespace App\Services\Sunat;
 
 use App\Models\Setting;
+use Illuminate\Support\Facades\Crypt;
 
 /**
  * Lee y centraliza la configuración SUNAT / NubeFact almacenada en la tabla settings.
@@ -109,7 +110,17 @@ class SunatConfig
      */
     public function nubefactToken(): string
     {
-        return (string) $this->get('nubefact_token', '');
+        $token = (string) $this->get('nubefact_token', '');
+
+        if (!str_starts_with($token, 'enc:')) {
+            return $token;
+        }
+
+        try {
+            return Crypt::decryptString(substr($token, 4));
+        } catch (\Throwable) {
+            return '';
+        }
     }
 
     /**

@@ -16,6 +16,7 @@ class ProductRecipeTest extends TestCase
 
     public function test_admin_can_create_product_with_recipe_ingredients(): void
     {
+        /** @var User $user */
         $user = User::factory()->create([
             'role' => 'admin',
         ]);
@@ -68,6 +69,7 @@ class ProductRecipeTest extends TestCase
 
     public function test_admin_can_update_product_recipe_ingredients(): void
     {
+        /** @var User $user */
         $user = User::factory()->create([
             'role' => 'admin',
         ]);
@@ -146,6 +148,7 @@ class ProductRecipeTest extends TestCase
 
     public function test_pos_cannot_add_recipe_product_when_ingredient_stock_is_insufficient(): void
     {
+        /** @var User $user */
         $user = User::factory()->create([
             'role' => 'admin',
         ]);
@@ -199,5 +202,131 @@ class ProductRecipeTest extends TestCase
 
         $response->assertStatus(422);
         $response->assertJsonFragment(['error' => 'Stock insuficiente para el ingrediente: Pan de hamburguesa']);
+    }
+
+    public function test_pos_checkout_reduces_ingredient_stock_for_recipe_products(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $area = Area::create(['name' => 'Salón']);
+        $table = Table::create([
+            'area_id' => $area->id,
+            'name' => 'Mesa 2',
+            'seats' => 4,
+            'status' => 'available',
+        ]);
+
+        $category = Category::create([
+            'name' => 'Platos principales',
+            'is_active' => true,
+        ]);
+
+        $ingredient = Product::create([
+            'name' => 'Pan de hamburguesa',
+            'category_id' => $category->id,
+            'price' => 1.50,
+            'cost' => 0.80,
+            'stock' => 10,
+            'is_active' => true,
+            'is_saleable' => false,
+            'is_new' => false,
+            'is_chef_recommendation' => false,
+        ]);
+
+        $product = Product::create([
+            'name' => 'Hamburguesa especial',
+            'category_id' => $category->id,
+            'price' => 24.90,
+            'cost' => 12.00,
+            'stock' => 50,
+            'is_active' => true,
+            'is_saleable' => true,
+            'is_new' => false,
+            'is_chef_recommendation' => false,
+        ]);
+
+        $product->ingredients()->sync([
+            $ingredient->id => ['quantity' => 2],
+        ]);
+
+        $this->actingAs($user)
+            ->post('/pos/order/' . $table->id . '/add', [
+                'product_id' => $product->id,
+            ]);
+
+        $order = $table->fresh()->orders()->where('status', 'pending')->firstOrFail();
+
+        $response = $this->actingAs($user)
+            ->post('/pos/order/' . $order->id . '/checkout', [
+                'payment_method' => 'cash',
+                'received_amount' => 25.00,
+                'document_type' => 'Ticket',
+            ]);
+
+        $response->assertRedirect('/pos');
+        $this->assertDatabaseHas('rest_orders', [
+            'id' => $order->id,
+            'status' => 'completed',
+        ]);
+
+        $ingredient->refresh();
+        $this->assertSame(8, $ingredient->stock);
+    }
+
+    public function test_delivery_cannot_be_created_when_recipe_ingredient_stock_is_insufficient(): void
+    {
+        /** @var User $user */
+        $user = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $category = Category::create([
+            'name' => 'Platos principales',
+            'is_active' => true,
+        ]);
+
+        $ingredient = Product::create([
+            'name' => 'Pan de hamburguesa',
+            'category_id' => $category->id,
+            'price' => 1.50,
+            'cost' => 0.80,
+            'stock' => 1,
+            'is_active' => true,
+            'is_saleable' => false,
+            'is_new' => false,
+            'is_chef_recommendation' => false,
+        ]);
+
+        $product = Product::create([
+            'name' => 'Hamburguesa especial',
+            'category_id' => $category->id,
+            'price' => 24.90,
+            'cost' => 12.00,
+            'stock' => 10,
+            'is_active' => true,
+            'is_saleable' => true,
+            'is_new' => false,
+            'is_chef_recommendation' => false,
+        ]);
+
+        $product->ingredients()->sync([
+            $ingredient->id => ['quantity' => 2],
+        ]);
+
+        $response = $this->actingAs($user)->from('/delivery/create')->post('/delivery', [
+            'client_name' => 'Cliente test',
+            'client_phone' => '987654321',
+            'address' => 'Av. Principal 123',
+            'payment_method' => 'cash',
+            'products' => [[
+                'id' => $product->id,
+                'qty' => 1,
+            ]],
+        ]);
+
+        $response->assertSessionHasErrors(['products']);
     }
 }

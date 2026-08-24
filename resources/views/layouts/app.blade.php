@@ -21,7 +21,7 @@
         // ── Colores de marca (desde configuración) ──
         $__brandSettings = \App\Models\Setting::whereIn('key', [
             'color_primary', 'color_primary_hover', 'color_primary_soft',
-            'color_sidebar_bg', 'color_sidebar_active',
+            'color_sidebar_bg', 'color_sidebar_active', 'brand_text_color',
         ])->pluck('value', 'key')->toArray();
 
         $__colorPrimary        = $__brandSettings['color_primary']        ?? '#ff8c00';
@@ -29,6 +29,7 @@
         $__colorPrimarySoft    = $__brandSettings['color_primary_soft']   ?? '#fff4e6';
         $__colorSidebarBg      = $__brandSettings['color_sidebar_bg']     ?? '#2d1b5e';
         $__colorSidebarActive  = $__brandSettings['color_sidebar_active'] ?? '#ff8c00';
+        $__brandTextColor      = $__brandSettings['brand_text_color']    ?? '#ffffff';
     @endphp
 
     <script>
@@ -39,6 +40,7 @@
             primarySoft: {!! json_encode($__colorPrimarySoft) !!},
             sidebarBg: {!! json_encode($__colorSidebarBg) !!},
             sidebarActive: {!! json_encode($__colorSidebarActive) !!},
+            brandText: {!! json_encode($__brandTextColor) !!},
         };
     </script>
 
@@ -62,6 +64,7 @@
             --primary:          {{ $__colorPrimary }};
             --primary-hover:    {{ $__colorPrimaryHover }};
             --primary-soft:     {{ $__colorPrimarySoft }};
+            --brand-text:       {{ $__brandTextColor }};
             --accent-pink:      #ff4d7e;
 
             --body-bg:          #dcdcf0;
@@ -338,7 +341,7 @@
             font-weight: 700;
             font-size: 15px;
             letter-spacing: -0.3px;
-            color: white;
+            color: var(--brand-text);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -863,7 +866,7 @@
     @endif
 
     {{-- Flash Messages --}}
-    @if(session('success') && !request()->routeIs('settings.index', 'settings.update'))
+    @if(session('success') && !request()->routeIs('settings.index', 'settings.update', 'pos.index', 'categories.index', 'products.index', 'tables.index'))
         <div class="alert border-0 shadow-sm rounded-4 mb-4 d-flex align-items-center" style="background:#f0fdf4;border-left:4px solid #22c55e!important;">
             <i class="bi bi-check-circle-fill fs-4 me-3 text-success"></i>
             <div><strong>¡Éxito!</strong> {{ session('success') }}</div>
@@ -871,7 +874,7 @@
         </div>
     @endif
 
-    @if(session('error') && !request()->routeIs('settings.index', 'settings.update'))
+    @if(session('error') && !request()->routeIs('settings.index', 'settings.update', 'categories.index', 'tables.index'))
         <div class="alert border-0 shadow-sm rounded-4 mb-4 d-flex align-items-center" style="background:#fff1f2;border-left:4px solid #f43f5e!important;">
             <i class="bi bi-exclamation-triangle-fill fs-4 me-3 text-danger"></i>
             <div><strong>Error:</strong> {{ session('error') }}</div>
@@ -949,6 +952,18 @@
     }
     applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
 </script>
+
+@if(session('success') && request()->routeIs('pos.index'))
+<script>
+    Swal.fire({
+        icon: 'success',
+        title: 'Operación exitosa',
+        text: @json(session('success')),
+        timer: 2200,
+        showConfirmButton: false
+    });
+</script>
+@endif
 
 @stack('scripts')
 </body>

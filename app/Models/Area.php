@@ -10,7 +10,11 @@ class Area extends Model
     protected $table = 'rest_areas';
 use HasFactory;
 
-    protected $fillable = ['name'];
+    protected $fillable = ['name', 'is_active'];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
 
     // RelaciÃƒÂ³n: Un ÃƒÂ¡rea tiene muchas mesas
     public function tables()

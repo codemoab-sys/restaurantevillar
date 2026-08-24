@@ -69,12 +69,18 @@ class NubeFactService
                 // Guardar enlace del PDF/XML/CDR si existen
                 if (!empty($response['enlace_del_pdf'])) {
                     $order->pdf_path = $response['enlace_del_pdf'];
+                } elseif (!empty($response['enlace'])) {
+                    $order->pdf_path = rtrim($response['enlace'], '/') . '.pdf';
                 }
                 if (!empty($response['enlace_del_xml'])) {
                     $order->xml_path = $response['enlace_del_xml'];
+                } elseif (!empty($response['enlace'])) {
+                    $order->xml_path = rtrim($response['enlace'], '/') . '.xml';
                 }
                 if (!empty($response['enlace_del_cdr'])) {
                     $order->cdr_path = $response['enlace_del_cdr'];
+                } elseif (!empty($response['enlace'])) {
+                    $order->cdr_path = rtrim($response['enlace'], '/') . '.cdr';
                 }
 
                 // Hash y código QR
@@ -132,12 +138,18 @@ class NubeFactService
 
                 if (!empty($response['enlace_del_pdf'])) {
                     $cn->pdf_path = $response['enlace_del_pdf'];
+                } elseif (!empty($response['enlace'])) {
+                    $cn->pdf_path = rtrim($response['enlace'], '/') . '.pdf';
                 }
                 if (!empty($response['enlace_del_xml'])) {
                     $cn->xml_path = $response['enlace_del_xml'];
+                } elseif (!empty($response['enlace'])) {
+                    $cn->xml_path = rtrim($response['enlace'], '/') . '.xml';
                 }
                 if (!empty($response['enlace_del_cdr'])) {
                     $cn->cdr_path = $response['enlace_del_cdr'];
+                } elseif (!empty($response['enlace'])) {
+                    $cn->cdr_path = rtrim($response['enlace'], '/') . '.cdr';
                 }
 
                 $cn->hash = $response['codigo_hash'] ?? null;
@@ -221,7 +233,7 @@ class NubeFactService
             $order->correlativo,
             number_format((float) $order->igv, 2, '.', ''),
             number_format((float) $order->total, 2, '.', ''),
-            now()->format('Y-m-d'),
+            now()->format('d-m-Y'),
             $this->guessClientDocType($order->client_document),
             $order->client_document ?: '-',
             $order->hash ?? '',

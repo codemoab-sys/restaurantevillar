@@ -6,14 +6,18 @@ use App\Models\Category;
 use App\Models\Client;
 use App\Models\Delivery;
 use App\Models\DeliveryDriver;
+use App\Models\DocumentSeries;
 use App\Models\InventoryLog;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Product;
 use App\Models\Setting;
+use App\Services\Sunat\SunatService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class DeliveryController extends Controller
 {
@@ -70,9 +74,37 @@ class DeliveryController extends Controller
             'address'        => 'required|string',
             'payment_method' => 'required|in:cash,card,transfer',
             'products'       => 'required|array|min:1',
-            'products.*.id'  => 'required|exists:products,id',
+            'products.*.id'  => 'required|exists:rest_products,id',
             'products.*.qty' => 'required|integer|min:1',
         ]);
+
+        foreach ($request->products as $item) {
+            $product = Product::with('ingredients')->find($item['id']);
+            if (!$product) {
+                continue;
+            }
+
+            $qty = (int) $item['qty'];
+
+            if (!is_null($product->stock) && $product->stock < $qty) {
+                throw ValidationException::withMessages([
+                    'products' => ['Stock insuficiente para ' . $product->name . '.'],
+                ]);
+            }
+
+            foreach ($product->ingredients as $ingredient) {
+                if (is_null($ingredient->stock)) {
+                    continue;
+                }
+
+                $required = (float) $ingredient->pivot->quantity * $qty;
+                if ($ingredient->stock < $required) {
+                    throw ValidationException::withMessages([
+                        'products' => ['Stock insuficiente para el ingrediente: ' . $ingredient->name],
+                    ]);
+                }
+            }
+        }
 
         DB::transaction(function () use ($request) {
             // 1. Crear la Orden (sin mesa — delivery)
@@ -184,8 +216,26 @@ class DeliveryController extends Controller
             return redirect()->route('delivery.show', $delivery)->with('error', 'Este pedido ya fue cerrado.');
         }
 
-        DB::transaction(function () use ($delivery, $request) {
+        $documentType = $request->input('document_type', 'Ticket');
+        if (!in_array($documentType, ['Ticket', 'Boleta', 'Factura'], true)) {
+            return back()->with('error', 'Tipo de comprobante inválido.');
+        }
+
+        $client = $delivery->client;
+        if ($documentType === 'Factura') {
+            $clientDocument = preg_replace('/\D/', '', (string) ($client?->document_number ?? ''));
+            if (strlen($clientDocument) !== 11 || !$client?->name) {
+                return back()->with('error', 'Para emitir Factura el cliente debe tener RUC y razón social válidos.');
+            }
+        }
+
+        DB::transaction(function () use ($delivery, $request, $documentType, $client) {
             $order = $delivery->order;
+
+            $isElectronic = in_array($documentType, ['Boleta', 'Factura'], true);
+            $series = $isElectronic
+                ? DocumentSeries::next($documentType === 'Factura' ? 'factura' : 'boleta')
+                : null;
 
             // Marcar orden como completada
             $order->update([
@@ -193,9 +243,14 @@ class DeliveryController extends Controller
                 'payment_method'  => $delivery->payment_method,
                 'received_amount' => $request->received_amount ?? $delivery->total_with_fee,
                 'change_amount'   => max(0, ($request->received_amount ?? 0) - $delivery->total_with_fee),
-                'document_type'   => $request->document_type ?? 'Ticket',
-                'client_name'     => $delivery->client_name,
+                'document_type'   => $documentType,
+                'client_id'       => $client?->id,
+                'client_name'     => $client?->name ?: $delivery->client_name,
+                'client_document' => $client?->document_number,
                 'cash_register_id'=> Auth::user()->activeCashRegister->id ?? null,
+                'serie'           => $series['serie'] ?? null,
+                'correlativo'     => $series['correlativo'] ?? null,
+                'sunat_status'    => $isElectronic ? 'PENDING' : 'NA',
             ]);
 
             // Descontar stock
@@ -247,6 +302,23 @@ class DeliveryController extends Controller
                 'delivered_at' => now(),
             ]);
         });
+
+        if ($documentType !== 'Ticket') {
+            $order = $delivery->order->fresh('details.product');
+            try {
+                (new SunatService())->sendInvoice($order);
+            } catch (\Throwable $e) {
+                Log::error('Error al enviar delivery a NubeFact', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage(),
+                ]);
+                $order->update([
+                    'sunat_status' => 'ERROR',
+                    'sunat_code' => '500',
+                    'sunat_description' => $e->getMessage(),
+                ]);
+            }
+        }
 
         return redirect()->route('delivery.index')->with('success', 'Pedido entregado y cobrado correctamente.');
     }

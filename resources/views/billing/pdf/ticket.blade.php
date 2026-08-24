@@ -91,7 +91,7 @@
 </div>
 
 <hr>
-<div class="legend">¡Gracias por su preferencia!</div>
+<div class="legend">{{ $company['ticket_footer'] }}</div>
 
 </body>
 </html>

@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión — {{ \App\Models\Setting::where('key','company_name')->value('value') ?? 'Mi Restaurante' }}</title>
     @php
-        $brandColors = \App\Models\Setting::whereIn('key', ['color_primary','color_primary_hover','color_primary_soft','color_sidebar_bg'])->pluck('value','key')->toArray();
+        $brandColors = \App\Models\Setting::whereIn('key', ['color_primary','color_primary_hover','color_primary_soft','color_sidebar_bg','brand_text_color'])->pluck('value','key')->toArray();
         $cPrimary       = $brandColors['color_primary']       ?? '#ff8c00';
         $cPrimaryHover  = $brandColors['color_primary_hover'] ?? '#e07b00';
         $cSidebar       = $brandColors['color_sidebar_bg']    ?? '#2d1b5e';
+        $brandTextColor = $brandColors['brand_text_color']   ?? '#ffffff';
     @endphp
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,6 +20,7 @@
             --brand: {{ $cPrimary }};
             --brand-hover: {{ $cPrimaryHover }};
             --brand-sidebar: {{ $cSidebar }};
+            --brand-text: {{ $brandTextColor }};
         }
         *:root { color-scheme: light; }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -203,7 +205,7 @@
         .login-brand-text h1 {
             font-size: 1.25rem;
             font-weight: 800;
-            color: white;
+            color: var(--brand-text);
             letter-spacing: -0.3px;
             line-height: 1.2;
         }

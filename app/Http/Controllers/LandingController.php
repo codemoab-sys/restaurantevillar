@@ -69,9 +69,15 @@ class LandingController extends Controller
             'primary'       => $settings['color_primary']       ?? '#ff8c00',
             'primary_hover' => $settings['color_primary_hover'] ?? '#e07b00',
             'primary_soft'  => $settings['color_primary_soft']  ?? '#fff4e6',
+            'text_color'    => $settings['brand_text_color']    ?? '#1e1e2d',
         ];
 
-        return view('landing.index', compact('company', 'web', 'brand'));
+        $appearance = [
+            'page_bg'   => $settings['web_page_bg'] ?? '#ffffff',
+            'header_bg' => $settings['web_header_bg'] ?? '#ffffff',
+        ];
+
+        return view('landing.index', compact('company', 'web', 'brand', 'appearance'));
     }
 
     private function imageUrl(?string $path, string $prefix = ''): ?string

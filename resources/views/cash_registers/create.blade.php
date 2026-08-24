@@ -4,7 +4,7 @@
 <div class="container-fluid py-4">
     <div class="row justify-content-center">
         <div class="col-md-6 col-lg-5">
-            
+
             <div class="card border-0 shadow-sm" style="border-radius: 16px; overflow: hidden;">
                 <!-- Header -->
                 <div class="bg-primary text-white p-4 text-center" style="background: linear-gradient(135deg, var(--sidebar-bg) 0%, var(--primary) 100%) !important;">
@@ -19,16 +19,16 @@
 
                 <!-- Body -->
                 <div class="card-body p-4 p-md-5">
-                    
+
                     @if(session('warning'))
                         <div class="alert alert-warning border-0 bg-warning bg-opacity-10 text-warning px-4 py-3" style="border-radius: 12px;">
                             <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('warning') }}
                         </div>
                     @endif
 
-                    <form action="{{ route('cash_registers.store') }}" method="POST">
+                    <form id="openingCashRegisterForm" action="{{ route('cash_registers.store') }}" method="POST">
                         @csrf
-                        
+
                         <div class="mb-4">
                             <label class="form-label text-muted fw-bold small text-uppercase">Monto Inicial (Fondo de Caja)</label>
                             <div class="input-group input-group-lg shadow-sm" style="border-radius: 12px; overflow: hidden;">
@@ -60,3 +60,47 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.getElementById('openingCashRegisterForm')?.addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        const form = this;
+        const amount = form.querySelector('[name="opening_amount"]').value;
+
+        Swal.fire({
+            icon: 'question',
+            title: '¿Abrir turno de caja?',
+            text: `Se registrará un fondo inicial de S/ ${Number(amount || 0).toFixed(2)}.`,
+            showCancelButton: true,
+            confirmButtonText: 'Sí, abrir turno',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#2563eb',
+            cancelButtonColor: '#6b7280'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form.submit();
+            }
+        });
+    });
+
+    @if(session('success'))
+        Swal.fire({
+            icon: 'success',
+            title: 'Turno abierto',
+            text: @json(session('success')),
+            timer: 2200,
+            showConfirmButton: false
+        });
+    @endif
+
+    @if(session('error'))
+        Swal.fire({
+            icon: 'error',
+            title: 'No se pudo abrir el turno',
+            text: @json(session('error'))
+        });
+    @endif
+</script>
+@endpush

@@ -151,12 +151,12 @@
                                     <a href="{{ route('billing.pdf', $o) }}" target="_blank" class="btn btn-outline-danger" title="PDF">
                                         <i class="bi bi-file-pdf"></i>
                                     </a>
-                                    @if($o->xml_path)
+                                    @if($o->xml_path || $o->sunat_status === 'ACCEPTED')
                                         <a href="{{ route('billing.xml', $o) }}" class="btn btn-outline-info" title="XML">
                                             <i class="bi bi-filetype-xml"></i>
                                         </a>
                                     @endif
-                                    @if($o->cdr_path)
+                                    @if($o->cdr_path || $o->sunat_status === 'ACCEPTED')
                                         <a href="{{ route('billing.cdr', $o) }}" class="btn btn-outline-success" title="CDR">
                                             <i class="bi bi-archive"></i>
                                         </a>

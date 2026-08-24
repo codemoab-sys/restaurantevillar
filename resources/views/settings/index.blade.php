@@ -4,7 +4,7 @@
 <div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            
+
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h2 class="fw-bold text-dark mb-0"><i class="bi bi-gear-fill me-2"></i>Configuración</h2>
@@ -15,35 +15,22 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-4">
 
-                    @if(session('success'))
-                        <div class="alert alert-success alert-permanent d-flex align-items-center" role="alert">
-                            <i class="bi bi-check-circle-fill me-2"></i>
-                            <strong>{{ session('success') }}</strong>
-                        </div>
-                    @endif
-                    @if(session('error'))
-                        <div class="alert alert-danger alert-permanent d-flex align-items-center" role="alert">
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                            <strong>{{ session('error') }}</strong>
-                        </div>
-                    @endif
-
                     <form action="{{ route('settings.update') }}" method="POST" enctype="multipart/form-data">
                         @csrf
-                        
+
                         <h5 class="fw-bold text-primary mb-3">Datos de la Empresa</h5>
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Nombre del Restaurante</label>
-                                <input type="text" name="company_name" class="form-control" value="{{ $settings['company_name'] ?? '' }}" placeholder="Ej: Restaurante Vito" required>
+                                <input type="text" name="company_name" class="form-control" value="{{ old('company_name', $settings['company_name'] ?? ($settings['sunat_nombre_comercial'] ?? $settings['sunat_razon_social'] ?? '')) }}" placeholder="Ej: Restaurante Vito">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Teléfono / Pedidos</label>
-                                <input type="text" name="company_phone" class="form-control" value="{{ $settings['company_phone'] ?? '' }}" placeholder="Ej: 999-888-777">
+                                <input type="text" name="company_phone" class="form-control" value="{{ old('company_phone', $settings['company_phone'] ?? '') }}" placeholder="Ej: 999-888-777">
                             </div>
                             <div class="col-12">
                                 <label class="form-label fw-bold">Dirección</label>
-                                <input type="text" name="company_address" class="form-control" value="{{ $settings['company_address'] ?? '' }}" placeholder="Ej: Av. Principal 123, Ica">
+                                <input type="text" name="company_address" class="form-control" value="{{ old('company_address', $settings['company_address'] ?? ($settings['sunat_direccion_fiscal'] ?? '')) }}" placeholder="Ej: Av. Principal 123, Ica">
                             </div>
                         </div>
 
@@ -104,6 +91,7 @@
                                 'color_primary_soft'    => '#fff4e6',
                                 'color_sidebar_bg'      => '#2d1b5e',
                                 'color_sidebar_active'  => '#ff8c00',
+                                'brand_text_color'      => '#ffffff',
                             ];
                         @endphp
 
@@ -169,6 +157,17 @@
                                     <span class="input-group-text color-hex">{{ $settings['color_sidebar_active'] ?? $colorDefaults['color_sidebar_active'] }}</span>
                                 </div>
                                 <small class="text-muted">Resalta el ítem seleccionado.</small>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Color texto de marca</label>
+                                <div class="input-group">
+                                    <input type="color" name="brand_text_color" class="form-control form-control-color color-input"
+                                           value="{{ $settings['brand_text_color'] ?? $colorDefaults['brand_text_color'] }}"
+                                           data-default="{{ $colorDefaults['brand_text_color'] }}">
+                                    <span class="input-group-text color-hex">{{ $settings['brand_text_color'] ?? $colorDefaults['brand_text_color'] }}</span>
+                                </div>
+                                <small class="text-muted">Texto del nombre junto al logo.</small>
                             </div>
                         </div>
 
@@ -295,9 +294,12 @@
                                     <i class="bi bi-shield-lock"></i> TOKEN NubeFact <span class="text-danger">*</span>
                                 </label>
                                 <input type="password" name="nubefact_token" class="form-control"
-                                       value="{{ $settings['nubefact_token'] ?? '' }}"
-                                       placeholder="••••••••••••••••••••••••">
-                                <small class="text-muted">Clave de autenticación.</small>
+                                        value=""
+                                        placeholder="{{ !empty($settings['nubefact_token'] ?? '') ? 'Token registrado; escribir para reemplazar' : 'Ingresa el TOKEN de NubeFact' }}"
+                                        autocomplete="new-password">
+                                    <small class="text-muted">
+                                     {{ !empty($settings['nubefact_token'] ?? '') ? 'Token registrado de forma segura. Déjalo vacío para conservarlo.' : 'Se guardará cifrado.' }}
+                                    </small>
                             </div>
                         </div>
 
@@ -323,9 +325,16 @@
                             <h6 class="alert-heading fw-bold mb-2">
                                 <i class="bi bi-exclamation-triangle-fill me-1"></i> IMPORTANTE: Las series deben ser IGUALES a las de tu cuenta NubeFact.
                             </h6>
-                            <p class="mb-1">Si en NubeFact tu Factura es <code>FPP1</code>, aquí pon <code>FPP1</code>. Si ponés una diferente, NubeFact rechazará el comprobante.</p>
-                            <p class="mb-1"><strong>Al generar un documento, el correlativo iniciará en 1.</strong></p>
+                            <p class="mb-1"><strong>Para este sistema migrado, registra series nuevas en NubeFact antes de emitir.</strong> Ejemplo: Factura <code>F002</code> y Boleta <code>B002</code>.</p>
+                            <p class="mb-1">Una serie nueva comenzará obligatoriamente con el correlativo <strong>1</strong>. No reutilices una serie del sistema anterior.</p>
+                            <p class="mb-1">Si conservas una serie ya usada, debes mantener su último correlativo real; el sistema lo preserva al guardar la configuración.</p>
                             <p class="mb-0"><small>Verifica tus series en: <a href="https://www.nubefact.com/login" target="_blank">nubefact.com</a> → Datos de la Empresa → Series asignadas.</small></p>
+                        </div>
+
+                        <div class="alert alert-danger py-2 mb-3 small">
+                            <i class="bi bi-shield-exclamation me-1"></i>
+                            Al cambiar a <strong>PRODUCCIÓN</strong>, debes usar series nuevas para separar las pruebas BETA.
+                            El primer comprobante de cada serie productiva comenzará en el correlativo <strong>1</strong>.
                         </div>
 
                         @php
@@ -391,7 +400,7 @@
                         </div>
 
                         <div class="mt-5 d-flex justify-content-end">
-                            <button type="submit" class="btn btn-primary px-5 fw-bold shadow">
+                            <button type="submit" class="btn btn-primary px-5 fw-bold shadow" id="saveSettingsButton">
                                 <i class="bi bi-save me-2"></i> Guardar Configuración
                             </button>
                         </div>
@@ -406,6 +415,34 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        @if(session('success'))
+            Swal.fire({
+                icon: 'success',
+                title: 'Configuración guardada',
+                text: @json(session('success')),
+                timer: 2200,
+                showConfirmButton: false
+            });
+        @endif
+
+        @if(session('error'))
+            Swal.fire({
+                icon: 'error',
+                title: 'No se pudo guardar',
+                text: @json(session('error')),
+                confirmButtonColor: '#dc3545'
+            });
+        @endif
+
+        @if($errors->any())
+            Swal.fire({
+                icon: 'error',
+                title: 'No se guardó la configuración',
+                text: @json(implode("\n", $errors->all())),
+                confirmButtonColor: '#dc3545'
+            });
+        @endif
+
         // ── Muestra el valor HEX junto a cada selector de color ──
         document.querySelectorAll('.color-input').forEach(function (input) {
             const hex = input.closest('.input-group')?.querySelector('.color-hex');
@@ -434,6 +471,8 @@
             form.addEventListener('submit', function (e) {
                 e.preventDefault();
 
+                if (form.dataset.submitting === 'true') return;
+
                 Swal.fire({
                     title: '¿Guardar configuración?',
                     text: 'Se aplicarán los cambios en todo el sistema.',
@@ -446,6 +485,8 @@
                     reverseButtons: true,
                 }).then((result) => {
                     if (result.isConfirmed) {
+                        form.dataset.submitting = 'true';
+                        document.getElementById('saveSettingsButton').disabled = true;
                         Swal.fire({
                             title: 'Guardando...',
                             html: 'Aplicando los cambios, un momento.',

@@ -29,12 +29,12 @@
             <a href="{{ route('billing.pdf.ticket', $order) }}" target="_blank" class="btn btn-outline-danger">
                 <i class="bi bi-receipt"></i> Ticket 80mm
             </a>
-            @if($order->xml_path)
+            @if($order->xml_path || $order->sunat_status === 'ACCEPTED')
                 <a href="{{ route('billing.xml', $order) }}" class="btn btn-outline-info">
                     <i class="bi bi-filetype-xml"></i> XML
                 </a>
             @endif
-            @if($order->cdr_path)
+            @if($order->cdr_path || $order->sunat_status === 'ACCEPTED')
                 <a href="{{ route('billing.cdr', $order) }}" class="btn btn-outline-success">
                     <i class="bi bi-archive"></i> CDR
                 </a>

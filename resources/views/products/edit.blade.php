@@ -9,7 +9,7 @@
     </div>
 </div>
 
-<form action="{{ route('products.update', $product->id) }}" method="POST" enctype="multipart/form-data" class="row g-4">
+<form id="productEditForm" action="{{ route('products.update', $product->id) }}" method="POST" enctype="multipart/form-data" class="row g-4">
     @csrf
     @method('PUT')
 
@@ -97,7 +97,7 @@
 
                 <div class="alert bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-3 mb-4 p-3">
                     <h6 class="text-primary fw-bold mb-3"><i class="bi bi-qr-code-scan me-2"></i>Opciones para Carta Digital (Menú QR)</h6>
-                    
+
                     <div class="row g-3">
                         <div class="col-md-4">
                             <label class="form-label fw-bold small text-muted">Precio de Promoción</label>
@@ -143,7 +143,7 @@
             </div>
             <div class="card-body p-3 bg-light overflow-auto" style="max-height: 400px;">
                 <p class="small text-muted mb-3">Selecciona los insumos que componen este plato. Al venderlo, se descontarán automáticamente.</p>
-                
+
                 <div id="ingredients-list">
                     @foreach($product->ingredients as $ingredient)
                         <div class="input-group mb-2" id="row-{{ $ingredient->id }}">
@@ -169,7 +169,7 @@
 
             </div>
             <div class="card-footer bg-white border-0 text-end">
-                <button type="submit" class="btn btn-success fw-bold w-100">
+                <button type="submit" class="btn btn-success fw-bold w-100" id="saveProductButton">
                     <i class="bi bi-check-lg me-2"></i> Guardar Cambios
                 </button>
             </div>
@@ -178,6 +178,18 @@
 </form>
 
 <script>
+    document.getElementById('productEditForm')?.addEventListener('submit', function (event) {
+        if (this.dataset.submitting === 'true') {
+            event.preventDefault();
+            return;
+        }
+
+        this.dataset.submitting = 'true';
+        const button = document.getElementById('saveProductButton');
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Guardando...';
+    });
+
     function addIngredient() {
         let container = document.getElementById('ingredients-list');
         let template = document.getElementById('ingredient-select-template').innerHTML;

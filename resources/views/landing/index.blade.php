@@ -18,6 +18,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="{{ $web['hero_subtitle'] }}">
     <title>{{ $web['hero_title'] }} — {{ $company['name'] }}</title>
+    <script>
+        (function () {
+            try {
+                const saved = localStorage.getItem('landing-theme');
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const theme = saved || (prefersDark ? 'dark' : 'light');
+                if (theme === 'dark') {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                }
+            } catch (e) {}
+        })();
+    </script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -27,16 +39,28 @@
             --brand: {{ $brand['primary'] }};
             --brand-dark: {{ $brand['primary_hover'] }};
             --brand-soft: {{ $brand['primary_soft'] }};
+            --brand-text: {{ $brand['text_color'] ?? '#1e1e2d' }};
             --ink: #1e1e2d;
             --ink-soft: #6c6c90;
             --bg-soft: #faf7f2;
+            --page-bg: {{ $appearance['page_bg'] }};
+            --header-bg: {{ $appearance['header_bg'] }};
+        }
+
+        html[data-theme="dark"] {
+            color-scheme: dark;
+            --ink: #f8fafc;
+            --ink-soft: #cbd5e1;
+            --bg-soft: #0f172a;
+            --page-bg: #020817;
+            --header-bg: rgba(15, 23, 42, 0.82);
         }
         * { scroll-behavior: smooth; }
-        html, body { background-color: #fff; }
+        html, body { background-color: var(--page-bg); }
         body {
             font-family: 'Outfit', sans-serif;
             color: var(--ink);
-            background: #fff;
+            background: var(--page-bg);
             -webkit-font-smoothing: antialiased;
         }
         section { scroll-margin-top: 84px; }
@@ -46,18 +70,26 @@
             position: sticky;
             top: 0;
             z-index: 1020;
-            background: rgba(255,255,255,.92);
+            background: var(--header-bg);
             backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(30,30,45,.08);
         }
         .site-nav .navbar-brand { font-weight: 800; letter-spacing: -.3px; color: var(--ink); }
+        .site-nav .brand-name {
+            margin-left: 12px;
+            color: var(--brand-text);
+        }
         .site-nav .nav-link { font-weight: 600; color: var(--ink-soft); margin: 0 6px; }
         .site-nav .nav-link:hover { color: var(--brand); }
+        .navbar-toggler { border-color: rgba(30,30,45,.2); }
+        .navbar-toggler-icon { filter: invert(0.15); }
         .site-nav .logo-img {
             height: 40px;
             width: 40px;
-            object-fit: cover;
-            border-radius: 8px;
+            object-fit: contain;
+            border-radius: 10px;
+            transform: scale(1.65);
+            transform-origin: center;
         }
         .brand-rect .site-nav .brand-name { display: none; }
         .brand-rect .site-nav .logo-img {
@@ -65,6 +97,7 @@
             width: auto;
             max-width: 220px;
             object-fit: contain !important;
+            transform: none;
         }
         .btn-brand { background: var(--brand); color: #fff; font-weight: 700; border-radius: 50px; border: none; }
         .btn-brand:hover { background: var(--brand-dark); color: #fff; }
@@ -312,9 +345,89 @@
         .site-footer a { color: rgba(255,255,255,.85); text-decoration: none; }
         .site-footer a:hover { color: var(--brand); }
 
+        @media (prefers-color-scheme: dark) {
+            html:not([data-theme="light"]) {
+                color-scheme: dark;
+                --ink: #f8fafc;
+                --ink-soft: #cbd5e1;
+                --bg-soft: #0f172a;
+                --page-bg: #020817;
+                --header-bg: rgba(15, 23, 42, 0.82);
+                --brand-text: #f8fafc;
+            }
+        }
+
+        html[data-theme="dark"] {
+            body {
+                background: var(--page-bg);
+                color: var(--ink);
+            }
+
+            .site-nav {
+                background: var(--header-bg);
+                border-bottom-color: rgba(148, 163, 184, 0.2);
+            }
+
+            .site-nav .nav-link {
+                color: rgba(255,255,255,0.74);
+            }
+
+            .site-nav .nav-link:hover {
+                color: var(--brand);
+            }
+
+            .btn-outline-dark {
+                color: #fff !important;
+                border-color: rgba(255,255,255,0.7) !important;
+                background: transparent !important;
+            }
+
+            .btn-outline-dark:hover {
+                background: rgba(255,255,255,0.08) !important;
+                color: #fff !important;
+            }
+
+            .bg-soft,
+            .feature-card,
+            .contact-card,
+            .step-icon {
+                background: rgba(15, 23, 42, 0.8) !important;
+                border-color: rgba(148, 163, 184, 0.18);
+                color: var(--ink);
+            }
+
+            .feature-card p,
+            .step-item p,
+            .sec-sub,
+            .contact-card h6,
+            .contact-card .cp-value {
+                color: var(--ink-soft);
+            }
+
+            .feature-icon {
+                background: rgba(255, 140, 0, 0.14);
+            }
+
+            .cta-banner {
+                background: linear-gradient(120deg, #0f172a, #1e293b);
+            }
+
+            .site-footer {
+                background: #020817;
+            }
+
+            .btn-ghost {
+                border-color: rgba(255,255,255,0.55);
+                color: #fff;
+            }
+        }
+
         @media (max-width: 768px) {
             .about-badge { left: 12px; }
             .hero { min-height: 72vh; }
+            .site-nav .logo-img {
+                transform: scale(1.45);
+            }
         }
         @media (prefers-reduced-motion: reduce) {
             * { scroll-behavior: auto !important; }
