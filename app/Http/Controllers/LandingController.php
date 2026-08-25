@@ -83,7 +83,7 @@ class LandingController extends Controller
     private function imageUrl(?string $path, string $prefix = ''): ?string
     {
         if (!$path) return null;
-        return asset('storage/' . $prefix . $path);
+        return route('uploaded-assets.show', ['path' => $prefix . $path]);
     }
 
     private function defaultSliders(): array

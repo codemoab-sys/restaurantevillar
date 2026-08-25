@@ -401,7 +401,7 @@
         <div class="login-brand">
             @php $logo = \App\Models\Setting::where('key','company_logo')->value('value'); @endphp
             @if($logo)
-                <img src="{{ asset('storage/'.$logo) }}" id="loginLogo" class="login-logo" style="object-fit:cover;" alt="logo">
+                <img src="{{ route('uploaded-assets.show', ['path' => $logo]) }}" id="loginLogo" class="login-logo" style="object-fit:cover;" alt="logo">
             @else
                 <div class="login-logo"><i class="bi bi-shop"></i></div>
             @endif

@@ -29,6 +29,9 @@ use App\Http\Controllers\BillingController;
 Route::get('/login', [LoginController::class, 'show'])->name('login');
 Route::post('/login', [LoginController::class, 'login'])->name('login.perform');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+Route::get('/uploaded-assets/{path}', [App\Http\Controllers\PublicAssetController::class, 'show'])
+    ->where('path', '.*')
+    ->name('uploaded-assets.show');
 
 // Menú Digital Público (Escaneo QR)
 Route::get('/menu', [App\Http\Controllers\MenuController::class, 'index'])->name('menu.index');

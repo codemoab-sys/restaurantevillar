@@ -75,7 +75,7 @@
                             </div>
                             <div class="col-md-4 text-center">
                                 @if(isset($settings['company_logo']) && $settings['company_logo'])
-                                    <img src="{{ asset('storage/'.$settings['company_logo']) }}" class="img-thumbnail" style="max-height: 80px;">
+                                    <img src="{{ route('uploaded-assets.show', ['path' => $settings['company_logo']]) }}" class="img-thumbnail" style="max-height: 80px;">
                                 @else
                                     <div class="p-3 border rounded bg-light text-muted"><i class="bi bi-image fs-1"></i></div>
                                 @endif

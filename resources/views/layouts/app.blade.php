@@ -693,10 +693,10 @@
             }
         @endphp
         @if($logo && !$logoIsRect)
-            <img src="{{ asset('storage/'.$logo) }}" style="width:40px;height:40px;object-fit:contain;" alt="logo">
+            <img src="{{ route('uploaded-assets.show', ['path' => $logo]) }}" style="width:40px;height:40px;object-fit:contain;" alt="logo">
             <div class="brand-name">{{ \App\Models\Setting::where('key', 'company_name')->value('value') ?? 'Mi Restaurante' }}</div>
         @elseif($logoIsRect)
-            <img src="{{ asset('storage/'.$logo) }}" style="max-width:100%;width:100%;max-height:60px;object-fit:contain;" alt="logo">
+            <img src="{{ route('uploaded-assets.show', ['path' => $logo]) }}" style="max-width:100%;width:100%;max-height:60px;object-fit:contain;" alt="logo">
         @else
             <div class="logo-box"><i class="bi bi-shop"></i></div>
             <div class="brand-name">{{ \App\Models\Setting::where('key', 'company_name')->value('value') ?? 'Mi Restaurante' }}</div>
