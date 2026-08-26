@@ -23,6 +23,8 @@ class User extends Authenticatable
         'email',
         'password',
         'role', // <--- IMPORTANTE: Agregamos esto para permitir guardar el rol
+        'failed_login_attempts',
+        'locked_at',
     ];
 
     /**
@@ -33,6 +35,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'failed_login_attempts',
+        'locked_at',
     ];
 
     /**
@@ -43,6 +47,7 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'locked_at' => 'datetime',
     ];
 
     public function cashRegisters()
@@ -53,5 +58,10 @@ class User extends Authenticatable
     public function activeCashRegister()
     {
         return $this->hasOne(CashRegister::class)->where('status', 'open')->latestOfMany();
+    }
+
+    public function loginAudits()
+    {
+        return $this->hasMany(LoginAudit::class);
     }
 }
