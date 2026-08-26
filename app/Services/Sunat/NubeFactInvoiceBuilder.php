@@ -24,6 +24,11 @@ class NubeFactInvoiceBuilder
         $order->loadMissing('client');
 
         $isFactura = $order->document_type === 'Factura';
+        $igvRate   = $this->config->igvRate();
+        if (!in_array($igvRate, [18.0, 10.5, 10.0, 4.0], true)) {
+            throw new \RuntimeException('El porcentaje de IGV configurado debe ser 18, 10.5, 10 o 4.');
+        }
+
         $igvFactor = $this->config->igvFactor(); // 0.18
         $denom     = 1 + $igvFactor;             // 1.18
 
@@ -73,6 +78,7 @@ class NubeFactInvoiceBuilder
                 'descuento'        => $lineDiscount,
                 'subtotal'         => $valorVenta,
                 'tipo_de_igv'      => 1,          // 1 = Gravado - Operación Onerosa
+                'igv'              => $igvLinea,
                 'total'            => $subtotalLinea,
                 'anticipo_regularizacion' => false,
                 'anticipo_documento_serie' => '',
@@ -137,10 +143,11 @@ class NubeFactInvoiceBuilder
             'fecha_de_vencimiento'       => '',
             'moneda'                     => $monedaCodigo,
             'tipo_de_cambio'             => '',
-            'porcentaje_de_igv'          => $this->config->igvRate(),
+            'porcentaje_de_igv'          => $igvRate,
             'descuento_global'           => '',
             'total_descuento'            => '',
             'total_anticipo'             => '',
+            'total_gravada'              => $totalGravada,
             'total_inafecta'             => $totalInafecta,
             'total_exonerada'            => $totalExonerada,
             'total_igv'                  => $totalIgv,

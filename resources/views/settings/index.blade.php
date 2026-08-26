@@ -263,8 +263,13 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label fw-bold">IGV (%)</label>
-                                <input type="number" step="0.01" name="sunat_igv_rate" class="form-control"
-                                       value="{{ $settings['sunat_igv_rate'] ?? '18' }}">
+                                @php $igvRate = (float) ($settings['sunat_igv_rate'] ?? 18); @endphp
+                                <select name="sunat_igv_rate" class="form-select">
+                                    <option value="18" {{ $igvRate === 18.0 ? 'selected' : '' }}>18%</option>
+                                    <option value="10.5" {{ $igvRate === 10.5 ? 'selected' : '' }}>10.5%</option>
+                                    <option value="10" {{ $igvRate === 10.0 ? 'selected' : '' }}>10%</option>
+                                    <option value="4" {{ $igvRate === 4.0 ? 'selected' : '' }}>4%</option>
+                                </select>
                             </div>
                         </div>
 

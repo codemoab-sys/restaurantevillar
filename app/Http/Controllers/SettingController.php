@@ -71,7 +71,7 @@ class SettingController extends Controller
             'sunat_distrito' => ['nullable', 'string', 'max:100'],
             'sunat_urbanizacion' => ['nullable', 'string', 'max:100'],
             'sunat_environment' => ['nullable', 'in:beta,produccion'],
-            'sunat_igv_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'sunat_igv_rate' => ['nullable', 'numeric', 'in:18,10.5,10,4'],
             'nubefact_ruta' => ['nullable', 'url', 'max:500'],
             'nubefact_token' => ['nullable', 'string', 'max:255'],
             'company_logo' => ['nullable', 'image', 'max:2048'],
