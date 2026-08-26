@@ -28,7 +28,7 @@ class SettingSeeder extends Seeder
             'sunat_distrito' => 'LIMA',
             'sunat_urbanizacion' => '-',
             'sunat_codigo_pais' => 'PE',
-            'sunat_igv_rate' => '18',            // %
+            'sunat_igv_rate' => '10.5',          // %
             'sunat_environment' => 'beta',       // beta | produccion
 
             // ── NubeFact (credenciales) ───────────────────────────────

@@ -78,7 +78,7 @@ class SunatConfig
 
     public function igvRate(): float
     {
-        return (float) $this->get('sunat_igv_rate', 18);
+        return (float) $this->get('sunat_igv_rate', 10.5);
     }
 
     public function igvFactor(): float

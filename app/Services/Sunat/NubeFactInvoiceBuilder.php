@@ -29,7 +29,7 @@ class NubeFactInvoiceBuilder
             throw new \RuntimeException('El porcentaje de IGV configurado debe ser 18, 10.5, 10 o 4.');
         }
 
-        $igvFactor = $this->config->igvFactor(); // 0.18
+        $igvFactor = $this->config->igvFactor();
         $denom     = 1 + $igvFactor;             // 1.18
 
         // ═══ ITEMS ═══════════════════════════════════════════════════
