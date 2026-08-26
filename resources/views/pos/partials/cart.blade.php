@@ -71,11 +71,22 @@
 
 <div class="bg-white border-top p-3" style="flex-shrink: 0; margin-top: auto;">
     @if($order)
+        @php
+            $igvRate = (new \App\Services\Sunat\SunatConfig())->igvRate();
+            $orderTotal = (float) $order->total;
+            $subtotalWithoutIgv = round($orderTotal / (1 + ($igvRate / 100)), 2);
+            $igvAmount = round($orderTotal - $subtotalWithoutIgv, 2);
+        @endphp
         <input type="hidden" id="cartTotalValue" value="{{ number_format($order->total, 2, '.', '') }}">
 
         <div class="row mb-1" style="font-size: 0.8rem;">
             <div class="col-6 text-muted">Subtotal:</div>
-            <div class="col-6 text-end">{{ number_format($order->total, 2) }}</div>
+            <div class="col-6 text-end">{{ $currency ?? 'S/' }}{{ number_format($subtotalWithoutIgv, 2) }}</div>
+        </div>
+
+        <div class="row mb-1" style="font-size: 0.8rem;">
+            <div class="col-6 text-muted">IGV ({{ rtrim(rtrim(number_format($igvRate, 2, '.', ''), '0'), '.') }}%):</div>
+            <div class="col-6 text-end">{{ $currency ?? 'S/' }}{{ number_format($igvAmount, 2) }}</div>
         </div>
 
         @if($order->discount > 0)
