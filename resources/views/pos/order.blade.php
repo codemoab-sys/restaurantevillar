@@ -425,7 +425,13 @@ foreach($categories as $cat) {
     // Escáner
     const barcodeInput = document.getElementById('barcodeInput');
     if(barcodeInput) {
-        barcodeInput.focus();
+        setTimeout(() => {
+            const activeElement = document.activeElement;
+            if (!activeElement || !activeElement.matches('input, textarea, select')) {
+                barcodeInput.focus();
+            }
+        }, 150);
+
         barcodeInput.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -617,25 +623,38 @@ foreach($categories as $cat) {
     window.clientsData = @json($clientsData);
 
     window.applyClient = function(c) {
-        document.getElementById('clientSearchInput').value = c.name;
-        document.getElementById('clientId').value = c.id;
-        document.getElementById('clientDoc').value = c.document;
-        document.getElementById('clientNotFound').classList.add('d-none');
-        document.getElementById('clientSuggestions').style.display = 'none';
+        var clientSearchInput = document.getElementById('clientSearchInput');
+        var clientId = document.getElementById('clientId');
+        var clientDoc = document.getElementById('clientDoc');
+        var clientNotFound = document.getElementById('clientNotFound');
+        var clientSuggestions = document.getElementById('clientSuggestions');
+
+        if (clientSearchInput) clientSearchInput.value = c.name || '';
+        if (clientId) clientId.value = c.id || '';
+        if (clientDoc) clientDoc.value = c.document || '';
+        if (clientNotFound) clientNotFound.classList.add('d-none');
+        if (clientSuggestions) clientSuggestions.style.display = 'none';
     };
 
     window.showClientNotFound = function() {
         var hint = document.getElementById('clientNotFound');
+        if (!hint) return;
         hint.classList.remove('d-none');
         hint.innerHTML = 'El cliente no existe. <a href="#" onclick="event.preventDefault(); openNewClientModal();">Registrarlo nuevo</a> para usar en esta venta.';
     };
 
     window.searchClient = function(input) {
-        var v = input.value.trim();
+        if (!input || !window.clientsData) return;
+
+        var v = (input.value || '').trim();
         var box = document.getElementById('clientSuggestions');
         var hint = document.getElementById('clientNotFound');
+        var clientId = document.getElementById('clientId');
+        var clientDoc = document.getElementById('clientDoc');
+
         if(v === '') {
-            document.getElementById('clientId').value=''; document.getElementById('clientDoc').value='';
+            if (clientId) clientId.value='';
+            if (clientDoc) clientDoc.value='';
             if(hint) hint.classList.add('d-none');
             if(box) box.style.display='none';
             return;
@@ -652,8 +671,8 @@ foreach($categories as $cat) {
             return c.name.toLowerCase().indexOf(q) !== -1 || c.document.indexOf(v) !== -1;
         }).slice(0, 8);
 
-        document.getElementById('clientId').value='';
-        document.getElementById('clientDoc').value='';
+        if (clientId) clientId.value='';
+        if (clientDoc) clientDoc.value='';
 
         if(matches.length === 0) {
             if(box) box.style.display='none';
@@ -666,23 +685,30 @@ foreach($categories as $cat) {
             return;
         }
         if(hint) hint.classList.add('d-none');
-        box.innerHTML = '';
-        matches.forEach(function(c) {
-            var it = document.createElement('button');
-            it.type = 'button';
-            it.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
-            it.innerHTML = '<span class="small text-truncate">' + c.name + '</span>' +
-                (c.document ? '<span class="badge bg-light text-secondary border ms-2 flex-shrink-0">' + c.document + '</span>' : '');
-            it.onclick = function() { window.applyClient(c); };
-            box.appendChild(it);
-        });
-        box.style.display = 'block';
+        if (box) {
+            box.innerHTML = '';
+            matches.forEach(function(c) {
+                var it = document.createElement('button');
+                it.type = 'button';
+                it.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+                it.innerHTML = '<span class="small text-truncate">' + c.name + '</span>' +
+                    (c.document ? '<span class="badge bg-light text-secondary border ms-2 flex-shrink-0">' + c.document + '</span>' : '');
+                it.onclick = function() { window.applyClient(c); };
+                box.appendChild(it);
+            });
+            box.style.display = 'block';
+        }
     };
-    window.searchClient({value: document.getElementById('clientSearchInput').value});
+
+    var clientSearchInputEl = document.getElementById('clientSearchInput');
+    if (clientSearchInputEl) {
+        window.searchClient({ value: clientSearchInputEl.value });
+    }
 
     document.addEventListener('click', function(e) {
-        if(!e.target.closest('#clientSearchInput') && !e.target.closest('#clientSuggestions')) {
-            document.getElementById('clientSuggestions').style.display = 'none';
+        var clientSuggestions = document.getElementById('clientSuggestions');
+        if(clientSuggestions && !e.target.closest('#clientSearchInput') && !e.target.closest('#clientSuggestions')) {
+            clientSuggestions.style.display = 'none';
         }
     });
 
@@ -731,49 +757,65 @@ foreach($categories as $cat) {
             });
     }
 
-    document.getElementById('quickBtnSearchDoc').addEventListener('click', window.quickSearchDocument);
-    document.getElementById('quick_document').addEventListener('keydown', function(e) {
-        if(e.key === 'Enter') { e.preventDefault(); window.quickSearchDocument(); }
-    });
+    var quickBtnSearchDoc = document.getElementById('quickBtnSearchDoc');
+    var quickDocumentInput = document.getElementById('quick_document');
+    var quickClientForm = document.getElementById('quickClientForm');
 
-    document.getElementById('quickClientForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        var form = e.target;
-        var submitBtn = form.querySelector('button[type="submit"]');
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...';
+    if (quickBtnSearchDoc) {
+        quickBtnSearchDoc.addEventListener('click', window.quickSearchDocument);
+    }
+    if (quickDocumentInput) {
+        quickDocumentInput.addEventListener('keydown', function(e) {
+            if(e.key === 'Enter') { e.preventDefault(); window.quickSearchDocument(); }
+        });
+    }
+    if (quickClientForm) {
+        quickClientForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            var form = e.target;
+            var submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...';
 
-        fetch(form.action, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: new FormData(form)
-        })
-        .then(res => res.json().then(data => ({ ok: res.ok, data })))
-        .then(({ ok, data }) => {
-            if(!ok) {
+            fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: new FormData(form)
+            })
+            .then(res => res.json().then(data => ({ ok: res.ok, data })))
+            .then(({ ok, data }) => {
+                if(!ok) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Guardar';
+                    var msg = data.message || 'No se pudo registrar el cliente.';
+                    var quickDocFeedback = document.getElementById('quickDocFeedback');
+                    if (quickDocFeedback) {
+                        quickDocFeedback.textContent = msg;
+                        quickDocFeedback.className = 'form-text text-danger';
+                    }
+                    return;
+                }
+                bootstrap.Modal.getInstance(document.getElementById('quickClientModal')).hide();
+                var clientSearchInput = document.getElementById('clientSearchInput');
+                if (clientSearchInput) clientSearchInput.value = data.name;
+                var clientId = document.getElementById('clientId');
+                if (clientId) clientId.value = data.id;
+                var clientDoc = document.getElementById('clientDoc');
+                if (clientDoc) clientDoc.value = data.document_number || '';
+                var clientNotFound = document.getElementById('clientNotFound');
+                if (clientNotFound) clientNotFound.classList.add('d-none');
+            })
+            .catch(() => {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = 'Guardar';
-                var msg = data.message || 'No se pudo registrar el cliente.';
-                document.getElementById('quickDocFeedback').textContent = msg;
-                document.getElementById('quickDocFeedback').className = 'form-text text-danger';
-                return;
-            }
-            bootstrap.Modal.getInstance(document.getElementById('quickClientModal')).hide();
-            document.getElementById('clientSearchInput').value = data.name;
-            document.getElementById('clientId').value = data.id;
-            document.getElementById('clientDoc').value = data.document_number || '';
-            document.getElementById('clientNotFound').classList.add('d-none');
-        })
-        .catch(() => {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = 'Guardar';
-            alert('Error al guardar el cliente.');
+                alert('Error al guardar el cliente.');
+            });
         });
-    });
+    }
 
     // Confirmar pago: evitar doble envío, mostrar spinner y alerta con SweetAlert2
     var checkoutForm = document.getElementById('checkoutForm');
