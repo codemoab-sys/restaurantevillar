@@ -192,23 +192,38 @@
 
     function adjustStock(e, form) {
         e.preventDefault();
-        var btn = form.querySelector('button[type="submit"]');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        var btn = form.querySelector('button[type="submit"], button:not([type])') || form.querySelector('button');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        }
 
         fetch(form.action, {
             method: 'POST',
             headers: { 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest' },
             body: new FormData(form)
-        }).then(r => r.json()).then(data => {
-            bootstrap.Modal.getInstance(form.closest('.modal')).hide();
-            if (data.error) {
-                showToast('error', 'Error', data.error);
-            } else {
+        }).then(async (r) => {
+            const contentType = r.headers.get('content-type') || '';
+            const data = contentType.includes('application/json') ? await r.json() : null;
+
+            if (r.ok && data && !data.error) {
+                const modalInstance = bootstrap.Modal.getInstance(form.closest('.modal'));
+                if (modalInstance) modalInstance.hide();
                 showToast('success', 'Stock ajustado', data.message || 'Listo');
                 setTimeout(() => location.reload(), 800);
+                return;
+            }
+
+            const modalInstance = bootstrap.Modal.getInstance(form.closest('.modal'));
+            if (modalInstance) modalInstance.hide();
+            if (data && data.error) {
+                showToast('error', 'Error', data.error);
+            } else {
+                showToast('error', 'Error', 'No se pudo ajustar el stock.');
             }
         }).catch(() => location.reload());
+
         return false;
     }
 </script>
