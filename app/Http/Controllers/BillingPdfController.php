@@ -89,6 +89,10 @@ class BillingPdfController extends Controller
             $this->refreshDocumentLinks($order);
         }
 
+        if (!empty($order->pdf_path)) {
+            return redirect($order->pdf_path);
+        }
+
         $order->load('details.product');
 
         return view('billing.pdf.ticket', [
