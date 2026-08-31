@@ -28,17 +28,19 @@
             </a>
             @if($order->pdf_path)
                 @php
-                    $whatsappMsg = urlencode(
-                        "📄 {$order->document_type} {$order->full_number}\n" .
-                        "💰 Total: S/ " . number_format($order->total, 2) . "\n" .
-                        "🔗 {$order->pdf_path}"
-                    );
-                    $whatsappNumber = $order->client_document ?? '';
+                    $clientPhone = $order->client?->phone ?? '';
+                    $whatsappBase = "📄 {$order->document_type} {$order->full_number}\n💰 Total: S/ " . number_format($order->total, 2) . "\n🔗 {$order->pdf_path}";
                 @endphp
                 <div class="btn-group">
-                    <a href="https://wa.me/{{ $whatsappNumber }}?text={{ $whatsappMsg }}" target="_blank" class="btn btn-success">
-                        <i class="bi bi-whatsapp"></i> WhatsApp
-                    </a>
+                    @if(!empty($clientPhone))
+                        <a href="https://wa.me/51{{ $clientPhone }}?text={{ urlencode($whatsappBase) }}" target="_blank" class="btn btn-success">
+                            <i class="bi bi-whatsapp"></i> WhatsApp
+                        </a>
+                    @else
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#whatsappModal">
+                            <i class="bi bi-whatsapp"></i> WhatsApp
+                        </button>
+                    @endif
                     <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
                         <span class="visually-hidden">Opciones</span>
                     </button>
@@ -170,6 +172,33 @@
 
 {{-- Modal Enviar PDF --}}
 @if($order->pdf_path)
+@if(empty($order->client?->phone))
+<div class="modal fade" id="whatsappModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white py-2">
+                <h6 class="modal-title fw-bold"><i class="bi bi-whatsapp me-1"></i>Enviar por WhatsApp</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted mb-2">{{ $order->document_type }} {{ $order->full_number }}</p>
+                <p class="small mb-2">El cliente <strong>{{ $order->client_name ?: 'sin nombre' }}</strong> no tiene teléfono registrado.</p>
+                <div class="mb-2">
+                    <label class="form-label small fw-bold">Número de celular <span class="text-danger">*</span></label>
+                    <input type="text" id="wa-phone-show" class="form-control form-control-sm"
+                           placeholder="Ej: 999888777" maxlength="9" pattern="[0-9]{9}">
+                </div>
+                <div class="d-flex justify-content-end gap-1">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success btn-sm" onclick="openWhatsAppShow()">
+                        <i class="bi bi-whatsapp me-1"></i>Abrir WhatsApp
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 <div class="modal fade" id="emailModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -206,4 +235,16 @@
     </div>
 </div>
 @endif
+
+<script>
+function openWhatsAppShow() {
+    const phone = document.getElementById('wa-phone-show').value.trim();
+    if (!phone || phone.length < 9) {
+        alert('Ingresa un número de celular válido (9 dígitos).');
+        return;
+    }
+    const msg = {!! json_encode($whatsappBase ?? '') !!};
+    window.open('https://wa.me/51' + phone + '?text=' + encodeURIComponent(msg), '_blank');
+}
+</script>
 @endsection

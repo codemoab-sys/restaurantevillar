@@ -147,15 +147,19 @@
                                     </a>
                                     @if($o->pdf_path)
                                         @php
-                                            $whatsappMsg = urlencode(
-                                                "📄 {$o->document_type} {$o->full_number}\n💰 Total: S/ " . number_format($o->total, 2) . "\n🔗 {$o->pdf_path}"
-                                            );
-                                            $whatsappNumber = $o->client_document ?? '';
+                                            $clientPhone = $o->client?->phone ?? '';
+                                            $whatsappBase = "📄 {$o->document_type} {$o->full_number}\n💰 Total: S/ " . number_format($o->total, 2) . "\n🔗 {$o->pdf_path}";
                                         @endphp
                                         <div class="btn-group btn-group-sm">
-                                            <a href="https://wa.me/{{ $whatsappNumber }}?text={{ $whatsappMsg }}" target="_blank" class="btn btn-success" title="WhatsApp">
-                                                <i class="bi bi-whatsapp"></i>
-                                            </a>
+                                            @if(!empty($clientPhone))
+                                                <a href="https://wa.me/51{{ $clientPhone }}?text={{ urlencode($whatsappBase) }}" target="_blank" class="btn btn-success" title="WhatsApp: {{ $clientPhone }}">
+                                                    <i class="bi bi-whatsapp"></i>
+                                                </a>
+                                            @else
+                                                <button type="button" class="btn btn-success" title="WhatsApp" data-bs-toggle="modal" data-bs-target="#whatsappModal-{{ $o->id }}">
+                                                    <i class="bi bi-whatsapp"></i>
+                                                </button>
+                                            @endif
                                             <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" title="Enviar">
                                                 <span class="visually-hidden">Opciones</span>
                                             </button>
@@ -212,6 +216,33 @@
 
     @foreach($orders as $o)
         @if($o->pdf_path)
+            @if(empty($o->client?->phone))
+            <div class="modal fade" id="whatsappModal-{{ $o->id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-sm">
+                    <div class="modal-content">
+                        <div class="modal-header bg-success text-white py-2">
+                            <h6 class="modal-title fw-bold"><i class="bi bi-whatsapp me-1"></i>Enviar por WhatsApp</h6>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="small text-muted mb-2">{{ $o->document_type }} {{ $o->full_number }}</p>
+                            <p class="small mb-2">El cliente <strong>{{ $o->client_name ?: 'sin nombre' }}</strong> no tiene teléfono registrado.</p>
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold">Número de celular <span class="text-danger">*</span></label>
+                                <input type="text" id="wa-phone-{{ $o->id }}" class="form-control form-control-sm"
+                                       placeholder="Ej: 999888777" maxlength="9" pattern="[0-9]{9}">
+                            </div>
+                            <div class="d-flex justify-content-end gap-1">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="button" class="btn btn-success btn-sm" onclick="openWhatsApp({{ $o->id }}, `{!! addslashes($whatsappBase ?? '') !!}`)">
+                                    <i class="bi bi-whatsapp me-1"></i>Abrir WhatsApp
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
         <div class="modal fade" id="emailModal-{{ $o->id }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered modal-sm">
                 <div class="modal-content">
@@ -243,4 +274,15 @@
         @endif
     @endforeach
 </div>
+
+<script>
+function openWhatsApp(orderId, baseMsg) {
+    const phone = document.getElementById('wa-phone-' + orderId).value.trim();
+    if (!phone || phone.length < 9) {
+        alert('Ingresa un número de celular válido (9 dígitos).');
+        return;
+    }
+    window.open('https://wa.me/51' + phone + '?text=' + encodeURIComponent(baseMsg), '_blank');
+}
+</script>
 @endsection
