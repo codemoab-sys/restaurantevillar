@@ -15,9 +15,6 @@
             <a href="{{ route('credit_notes.index') }}" class="btn btn-outline-warning me-2">
                 <i class="bi bi-arrow-counterclockwise"></i> Notas de Crédito
             </a>
-            <a href="{{ route('daily_summaries.index') }}" class="btn btn-outline-info">
-                <i class="bi bi-calendar-week"></i> Resumen Diario
-            </a>
         </div>
     </div>
 

@@ -755,9 +755,6 @@
                 <a href="{{ route('credit_notes.index') }}" class="nav-link {{ request()->routeIs('credit_notes.*') ? 'active' : '' }}">
                     <i class="bi bi-arrow-counterclockwise"></i> Notas de Crédito
                 </a>
-                <a href="{{ route('daily_summaries.index') }}" class="nav-link {{ request()->routeIs('daily_summaries.*') ? 'active' : '' }}">
-                    <i class="bi bi-calendar-week"></i> Resumen Diario
-                </a>
             @endif
             <div class="menu-category" style="margin-top:12px;">Caja / Arqueo</div>
             @if(Auth::user() && Auth::user()->activeCashRegister)

@@ -334,13 +334,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/credit-notes/{creditNote}/xml',      [\App\Http\Controllers\CreditNoteController::class, 'downloadXml'])->name('credit_notes.xml');
         Route::get('/credit-notes/{creditNote}/cdr',      [\App\Http\Controllers\CreditNoteController::class, 'downloadCdr'])->name('credit_notes.cdr');
 
-        // Resumen Diario de Boletas
-        Route::get('/daily-summaries',                       [\App\Http\Controllers\DailySummaryController::class, 'index'])->name('daily_summaries.index');
-        Route::post('/daily-summaries',                      [\App\Http\Controllers\DailySummaryController::class, 'store'])->name('daily_summaries.store');
-        Route::post('/daily-summaries/{summary}/check',      [\App\Http\Controllers\DailySummaryController::class, 'check'])->name('daily_summaries.check');
-        Route::get('/daily-summaries/{summary}/xml',         [\App\Http\Controllers\DailySummaryController::class, 'downloadXml'])->name('daily_summaries.xml');
-        Route::get('/daily-summaries/{summary}/cdr',         [\App\Http\Controllers\DailySummaryController::class, 'downloadCdr'])->name('daily_summaries.cdr');
-
         // Dashboard y BI
         Route::get('/sistema', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
