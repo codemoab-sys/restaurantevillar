@@ -148,8 +148,8 @@
                                     <a href="{{ route('billing.show', $o) }}" class="btn btn-outline-secondary" title="Ver">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <a href="{{ route('billing.pdf', $o) }}" target="_blank" class="btn btn-outline-danger" title="PDF">
-                                        <i class="bi bi-file-pdf"></i>
+                                    <a href="{{ route('billing.pdf.ticket', $o) }}" target="_blank" class="btn btn-outline-danger" title="Ticket 80mm">
+                                        <i class="bi bi-receipt"></i>
                                     </a>
                                     @if($o->xml_path || $o->sunat_status === 'ACCEPTED')
                                         <a href="{{ route('billing.xml', $o) }}" class="btn btn-outline-info" title="XML">

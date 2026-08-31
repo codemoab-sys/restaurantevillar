@@ -23,10 +23,7 @@
             </h2>
         </div>
         <div class="btn-group">
-            <a href="{{ route('billing.pdf', $order) }}" target="_blank" class="btn btn-danger">
-                <i class="bi bi-file-pdf"></i> PDF A4
-            </a>
-            <a href="{{ route('billing.pdf.ticket', $order) }}" target="_blank" class="btn btn-outline-danger">
+            <a href="{{ route('billing.pdf.ticket', $order) }}" target="_blank" class="btn btn-danger">
                 <i class="bi bi-receipt"></i> Ticket 80mm
             </a>
             @if($order->xml_path || $order->sunat_status === 'ACCEPTED')
