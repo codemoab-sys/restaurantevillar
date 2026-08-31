@@ -145,9 +145,34 @@
                                     <a href="{{ route('billing.show', $o) }}" class="btn btn-outline-secondary" title="Ver">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <a href="{{ route('billing.pdf.ticket', $o) }}" target="_blank" class="btn btn-outline-danger" title="Ticket 80mm">
-                                        <i class="bi bi-receipt"></i>
-                                    </a>
+                                    @if($o->pdf_path)
+                                        @php
+                                            $whatsappMsg = urlencode(
+                                                "📄 {$o->document_type} {$o->full_number}\n💰 Total: S/ " . number_format($o->total, 2) . "\n🔗 {$o->pdf_path}"
+                                            );
+                                            $whatsappNumber = $o->client_document ?? '';
+                                        @endphp
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="https://wa.me/{{ $whatsappNumber }}?text={{ $whatsappMsg }}" target="_blank" class="btn btn-success" title="WhatsApp">
+                                                <i class="bi bi-whatsapp"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" title="Enviar">
+                                                <span class="visually-hidden">Opciones</span>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li>
+                                                    <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#emailModal-{{ $o->id }}">
+                                                        <i class="bi bi-envelope me-2"></i>Correo
+                                                    </button>
+                                                </li>
+                                                <li>
+                                                    <a href="{{ route('billing.pdf.ticket', $o) }}" target="_blank" class="dropdown-item">
+                                                        <i class="bi bi-printer me-2"></i>Imprimir
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    @endif
                                     @if($o->xml_path || $o->sunat_status === 'ACCEPTED')
                                         <a href="{{ route('billing.xml', $o) }}" class="btn btn-outline-info" title="XML">
                                             <i class="bi bi-filetype-xml"></i>
@@ -184,5 +209,38 @@
             {{ $orders->links() }}
         </div>
     </div>
+
+    @foreach($orders as $o)
+        @if($o->pdf_path)
+        <div class="modal fade" id="emailModal-{{ $o->id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-sm">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white py-2">
+                        <h6 class="modal-title fw-bold"><i class="bi bi-envelope me-1"></i>Enviar por Correo</h6>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="small text-muted mb-2">{{ $o->document_type }} {{ $o->full_number }}</p>
+                        <form action="{{ route('billing.sendEmail', $o) }}" method="POST">
+                            @csrf
+                            <div class="mb-2">
+                                <input type="email" name="email" class="form-control form-control-sm" required
+                                       value="{{ $o->client?->email ?? '' }}" placeholder="correo@cliente.com">
+                            </div>
+                            <div class="mb-2">
+                                <textarea name="message" class="form-control form-control-sm" rows="1" maxlength="500"
+                                          placeholder="Mensaje opcional..."></textarea>
+                            </div>
+                            <div class="d-flex justify-content-end gap-1">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-send me-1"></i>Enviar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+    @endforeach
 </div>
 @endsection
