@@ -56,7 +56,7 @@ class NubeFactCreditNoteBuilder
                 'unidad_de_medida' => 'NIU',
                 'codigo'           => (string) ($product->id ?? '001'),
                 'descripcion'      => $product->name ?? 'Producto',
-                'cantidad'         => $zeroAmounts ? 0 : $cantidad,
+                'cantidad'         => $cantidad,
                 'valor_unitario'   => $zeroAmounts ? 0 : $valorUnit,
                 'precio_unitario'  => $zeroAmounts ? 0 : round($precioVentaUnit, 2),
                 'descuento'        => '',
