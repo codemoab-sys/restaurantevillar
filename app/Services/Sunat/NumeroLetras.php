@@ -81,7 +81,7 @@ class NumeroLetras
     private static function convertirBloque(int $numero): string
     {
         $centena = intdiv($numero, 100);
-        $ resto = $numero % 100;
+        $resto = $numero % 100;
         $partes = [];
 
         if ($centena > 0) {
