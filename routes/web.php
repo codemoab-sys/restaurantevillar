@@ -334,6 +334,15 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/credit-notes/{creditNote}/xml',      [\App\Http\Controllers\CreditNoteController::class, 'downloadXml'])->name('credit_notes.xml');
         Route::get('/credit-notes/{creditNote}/cdr',      [\App\Http\Controllers\CreditNoteController::class, 'downloadCdr'])->name('credit_notes.cdr');
 
+        // Notas de Débito
+        Route::get('/debit-notes',                        [\App\Http\Controllers\DebitNoteController::class, 'index'])->name('debit_notes.index');
+        Route::get('/debit-notes/create/{order}',         [\App\Http\Controllers\DebitNoteController::class, 'create'])->name('debit_notes.create');
+        Route::post('/debit-notes/{order}',               [\App\Http\Controllers\DebitNoteController::class, 'store'])->name('debit_notes.store');
+        Route::get('/debit-notes/{debitNote}',            [\App\Http\Controllers\DebitNoteController::class, 'show'])->name('debit_notes.show');
+        Route::post('/debit-notes/{debitNote}/retry',     [\App\Http\Controllers\DebitNoteController::class, 'retry'])->name('debit_notes.retry');
+        Route::get('/debit-notes/{debitNote}/xml',        [\App\Http\Controllers\DebitNoteController::class, 'downloadXml'])->name('debit_notes.xml');
+        Route::get('/debit-notes/{debitNote}/cdr',        [\App\Http\Controllers\DebitNoteController::class, 'downloadCdr'])->name('debit_notes.cdr');
+
         // Dashboard y BI
         Route::get('/sistema', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');

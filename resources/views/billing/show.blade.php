@@ -48,6 +48,9 @@
                 <a href="{{ route('credit_notes.create', $order) }}" class="btn btn-outline-warning">
                     <i class="bi bi-arrow-counterclockwise"></i> Emitir N.C.
                 </a>
+                <a href="{{ route('debit_notes.create', $order) }}" class="btn btn-outline-info">
+                    <i class="bi bi-arrow-clockwise"></i> Emitir N.D.
+                </a>
             @endif
         </div>
     </div>

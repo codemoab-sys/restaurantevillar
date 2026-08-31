@@ -3,6 +3,7 @@
 namespace App\Services\Sunat;
 
 use App\Models\CreditNote;
+use App\Models\DebitNote;
 use App\Models\Order;
 
 /**
@@ -28,6 +29,11 @@ class SunatService
     public function sendCreditNote(CreditNote $cn): CreditNote
     {
         return $this->nubefact->sendCreditNote($cn);
+    }
+
+    public function sendDebitNote(DebitNote $dn): DebitNote
+    {
+        return $this->nubefact->sendDebitNote($dn);
     }
 
     public function voidDocument(string $tipoComprobante, string $serie, int $numero, string $motivo): array

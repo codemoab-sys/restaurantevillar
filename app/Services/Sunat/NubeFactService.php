@@ -3,6 +3,7 @@
 namespace App\Services\Sunat;
 
 use App\Models\CreditNote;
+use App\Models\DebitNote;
 use App\Models\Order;
 use Exception;
 use Illuminate\Support\Facades\Log;
@@ -20,12 +21,14 @@ class NubeFactService
     private SunatConfig $config;
     private NubeFactInvoiceBuilder $invoiceBuilder;
     private NubeFactCreditNoteBuilder $creditNoteBuilder;
+    private NubeFactDebitNoteBuilder $debitNoteBuilder;
 
     public function __construct(?SunatConfig $config = null)
     {
         $this->config           = $config ?? new SunatConfig();
         $this->invoiceBuilder   = new NubeFactInvoiceBuilder($this->config);
         $this->creditNoteBuilder = new NubeFactCreditNoteBuilder($this->config);
+        $this->debitNoteBuilder  = new NubeFactDebitNoteBuilder($this->config);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -166,6 +169,74 @@ class NubeFactService
 
         $cn->save();
         return $cn;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  NOTA DE DÉBITO
+    // ═══════════════════════════════════════════════════════════════
+
+    public function sendDebitNote(DebitNote $dn): DebitNote
+    {
+        if (!$dn->order || $dn->order->sunat_status !== 'ACCEPTED') {
+            throw new \RuntimeException('Solo se puede enviar una nota de débito para un comprobante aceptado por SUNAT.');
+        }
+
+        if (!$this->config->isNubefactConfigured()) {
+            throw new \RuntimeException('Configure RUTA, TOKEN y datos reales del emisor en Configuración SUNAT.');
+        }
+
+        $json = $this->debitNoteBuilder->build($dn);
+
+        try {
+            $response = $this->send($json);
+
+            $dn->sent_at = now();
+
+            if (isset($response['errors'])) {
+                $dn->sunat_status      = 'REJECTED';
+                $dn->sunat_code        = $response['codigo'] ?? '400';
+                $dn->sunat_description = $response['errors'];
+            } elseif (isset($response['aceptada_por_sunat'])) {
+                $dn->sunat_code        = $response['sunat_responsecode'] ?? null;
+                $dn->sunat_description = $response['sunat_description'] ?? '';
+
+                if ($response['aceptada_por_sunat'] === true) {
+                    $dn->sunat_status = 'ACCEPTED';
+                } else {
+                    $dn->sunat_status = 'OBSERVED';
+                    $dn->sunat_description = $response['sunat_description'] ?? 'Observada por SUNAT';
+                }
+
+                if (!empty($response['enlace_del_pdf'])) {
+                    $dn->pdf_path = $response['enlace_del_pdf'];
+                } elseif (!empty($response['enlace'])) {
+                    $dn->pdf_path = rtrim($response['enlace'], '/') . '.pdf';
+                }
+                if (!empty($response['enlace_del_xml'])) {
+                    $dn->xml_path = $response['enlace_del_xml'];
+                } elseif (!empty($response['enlace'])) {
+                    $dn->xml_path = rtrim($response['enlace'], '/') . '.xml';
+                }
+                if (!empty($response['enlace_del_cdr'])) {
+                    $dn->cdr_path = $response['enlace_del_cdr'];
+                } elseif (!empty($response['enlace'])) {
+                    $dn->cdr_path = rtrim($response['enlace'], '/') . '.cdr';
+                }
+
+                $dn->hash = $response['codigo_hash'] ?? null;
+            }
+        } catch (\Exception $e) {
+            Log::error('NubeFact sendDebitNote error', [
+                'dn_id' => $dn->id,
+                'msg'   => $e->getMessage(),
+            ]);
+            $dn->sunat_status      = 'ERROR';
+            $dn->sunat_code        = '500';
+            $dn->sunat_description = $e->getMessage();
+        }
+
+        $dn->save();
+        return $dn;
     }
 
     // ═══════════════════════════════════════════════════════════════
