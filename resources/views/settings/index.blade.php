@@ -309,6 +309,27 @@
                             @endif
                         </div>
 
+                        {{-- ═══ SMTP (Envío de comprobantes) ═══ --}}
+                        <h6 class="fw-bold text-primary mb-3 mt-4">
+                            <i class="bi bi-envelope me-2"></i>Correo Electrónico (SMTP)
+                        </h6>
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-body">
+                                <p class="small text-muted mb-3">
+                                    Servidor: <code>mail.moabcode.com:465 (SSL)</code> ·
+                                    Usuario: <code>restaurantevillar@moabcode.com</code>
+                                </p>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Contraseña SMTP <span class="text-danger">*</span></label>
+                                    <input type="password" name="smtp_password" class="form-control"
+                                           placeholder="{{ !empty($settings['smtp_password'] ?? '') ? 'Contraseña registrada; escribir para reemplazar' : 'Ingresa la contraseña del correo' }}">
+                                    <small class="text-muted">
+                                        {{ !empty($settings['smtp_password'] ?? '') ? 'Contraseña configurada. Déjalo vacío para conservarla.' : 'Se usará para enviar comprobantes por correo.' }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
                         {{-- ═══ SERIES DE COMPROBANTES ═══ --}}
                         <h6 class="fw-bold text-primary mb-3 mt-4">
                             <i class="bi bi-list-ol me-2"></i>Series de Comprobantes

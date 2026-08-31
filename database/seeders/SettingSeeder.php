@@ -34,6 +34,9 @@ class SettingSeeder extends Seeder
             // ── NubeFact (credenciales) ───────────────────────────────
             'nubefact_ruta' => '',               // RUTA de la API NubeFact
             'nubefact_token' => '',              // TOKEN de autenticación
+
+            // ── SMTP (envío de comprobantes) ─────────────────────────
+            'smtp_password' => '',               // Contraseña correo restaurantevillar@moabcode.com
         ];
 
         foreach ($data as $key => $value) {

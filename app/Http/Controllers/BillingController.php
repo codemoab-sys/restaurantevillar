@@ -3,10 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\Setting;
+use App\Mail\InvoiceMail;
 use App\Services\Sunat\SunatService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -207,5 +211,48 @@ class BillingController extends Controller
             'Content-Type'        => $mime,
             'Content-Disposition' => 'attachment; filename="' . basename($relPath) . '"',
         ]);
+    }
+
+    /**
+     * Envía el comprobante por correo electrónico.
+     */
+    public function sendEmail(Request $request, Order $order)
+    {
+        abort_unless(in_array($order->document_type, ['Boleta', 'Factura']), 404);
+
+        $request->validate([
+            'email' => 'required|email|max:250',
+            'message' => 'nullable|string|max:500',
+        ]);
+
+        if (empty($order->pdf_path)) {
+            return back()->with('error', 'No hay PDF disponible. El comprobante debe ser aceptado por SUNAT primero.');
+        }
+
+        $passwordRaw = Setting::where('key', 'smtp_password')->value('value');
+        if (empty($passwordRaw)) {
+            return back()->with('error', 'No hay contraseña SMTP configurada. Ve a Configuración → SUNAT.');
+        }
+        $password = str_starts_with($passwordRaw, 'enc:')
+            ? Crypt::decryptString(substr($passwordRaw, 4))
+            : $passwordRaw;
+
+        config([
+            'mail.mailers.smtp.password' => $password,
+        ]);
+
+        try {
+            Mail::to($request->input('email'))->send(
+                new InvoiceMail($order, $request->input('message', ''))
+            );
+
+            return back()->with('success', "Comprobante enviado a {$request->input('email')}.");
+        } catch (\Throwable $e) {
+            Log::error('Error enviando comprobante por email', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+            return back()->with('error', 'Error al enviar: ' . $e->getMessage());
+        }
     }
 }

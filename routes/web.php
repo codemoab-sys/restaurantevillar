@@ -324,6 +324,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/billing/{order}/cdr',        [BillingController::class, 'downloadCdr'])->name('billing.cdr');
         Route::get('/billing/{order}/pdf',        [\App\Http\Controllers\BillingPdfController::class, 'show'])->name('billing.pdf');
         Route::get('/billing/{order}/ticket',     [\App\Http\Controllers\BillingPdfController::class, 'ticket'])->name('billing.pdf.ticket');
+        Route::post('/billing/{order}/send-email', [\App\Http\Controllers\BillingController::class, 'sendEmail'])->name('billing.sendEmail');
 
         // Notas de Crédito
         Route::get('/credit-notes',                       [\App\Http\Controllers\CreditNoteController::class, 'index'])->name('credit_notes.index');

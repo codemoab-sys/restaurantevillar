@@ -59,6 +59,7 @@ class SettingController extends Controller
             'sunat_igv_rate' => ['nullable', 'numeric', 'in:18,10.5,10,4'],
             'nubefact_ruta' => ['nullable', 'url', 'max:500'],
             'nubefact_token' => ['nullable', 'string', 'max:255'],
+            'smtp_password' => ['nullable', 'string', 'max:255'],
             'company_logo' => ['nullable', 'image', 'max:2048'],
             'serie_factura' => ['nullable', 'string', 'size:4', 'regex:/^F[A-Z0-9]{3}$/i'],
             'serie_boleta' => ['nullable', 'string', 'size:4', 'regex:/^B[A-Z0-9]{3}$/i'],
@@ -129,6 +130,13 @@ class SettingController extends Controller
             Setting::updateOrCreate(
                 ['key' => 'nubefact_token'],
                 ['value' => 'enc:' . Crypt::encryptString(trim($request->input('nubefact_token')))]
+            );
+        }
+
+        if ($request->filled('smtp_password')) {
+            Setting::updateOrCreate(
+                ['key' => 'smtp_password'],
+                ['value' => 'enc:' . Crypt::encryptString(trim($request->input('smtp_password')))]
             );
         }
 

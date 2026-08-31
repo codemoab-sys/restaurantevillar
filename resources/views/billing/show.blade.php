@@ -26,6 +26,11 @@
             <a href="{{ route('billing.pdf.ticket', $order) }}" target="_blank" class="btn btn-danger">
                 <i class="bi bi-receipt"></i> Ticket 80mm
             </a>
+            @if($order->pdf_path)
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#sendModal">
+                    <i class="bi bi-send"></i> Enviar PDF
+                </button>
+            @endif
             @if($order->xml_path || $order->sunat_status === 'ACCEPTED')
                 <a href="{{ route('billing.xml', $order) }}" class="btn btn-outline-info">
                     <i class="bi bi-filetype-xml"></i> XML
@@ -137,4 +142,85 @@
         </div>
     </div>
 </div>
+
+{{-- Modal Enviar PDF --}}
+@if($order->pdf_path)
+<div class="modal fade" id="sendModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-send me-2"></i>Enviar Comprobante</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                {{-- Opciones de envío --}}
+                <div class="d-grid gap-2 mb-4">
+                    {{-- WhatsApp --}}
+                    @php
+                        $whatsappMsg = urlencode(
+                            "📄 {$order->document_type} {$order->full_number}\n" .
+                            "💰 Total: S/ " . number_format($order->total, 2) . "\n" .
+                            "🔗 {$order->pdf_path}"
+                        );
+                        $whatsappNumber = $order->client_document ?? '';
+                    @endphp
+                    <a href="https://wa.me/{{ $whatsappNumber }}?text={{ $whatsappMsg }}" target="_blank"
+                       class="btn btn-success btn-lg">
+                        <i class="bi bi-whatsapp me-2"></i>Enviar por WhatsApp
+                    </a>
+
+                    {{-- Email --}}
+                    <button type="button" class="btn btn-outline-primary btn-lg" onclick="toggleEmailForm()">
+                        <i class="bi bi-envelope me-2"></i>Enviar por Correo
+                    </button>
+
+                    {{-- Imprimir --}}
+                    <a href="{{ route('billing.pdf.ticket', $order) }}" target="_blank"
+                       class="btn btn-outline-dark btn-lg">
+                        <i class="bi bi-printer me-2"></i>Imprimir Ticket
+                    </a>
+                </div>
+
+                {{-- Formulario de email (oculto por defecto) --}}
+                <div id="emailForm" style="display:none;">
+                    <form action="{{ route('billing.sendEmail', $order) }}" method="POST">
+                        @csrf
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Correo del cliente <span class="text-danger">*</span></label>
+                            <input type="email" name="email" class="form-control" required
+                                   value="{{ $order->client?->email ?? '' }}"
+                                   placeholder="cliente@correo.com">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Mensaje (opcional)</label>
+                            <textarea name="message" class="form-control" rows="2" maxlength="500"
+                                      placeholder="Adjuntamos su comprobante electrónico..."></textarea>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-outline-secondary" onclick="toggleEmailForm()">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send me-1"></i> Enviar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleEmailForm() {
+    const form = document.getElementById('emailForm');
+    const options = form.previousElementSibling;
+    if (form.style.display === 'none') {
+        form.style.display = 'block';
+        options.style.display = 'none';
+    } else {
+        form.style.display = 'none';
+        options.style.display = 'grid';
+    }
+}
+</script>
+@endif
 @endsection
