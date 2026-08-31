@@ -138,6 +138,31 @@ Route::get('/debug/ultima-factura-response', function () {
     ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 })->name('debug.last.invoice.response');
 
+// Debug temporal: sincroniza la última factura local con el estado real de NubeFact
+Route::get('/debug/sync-ultima-factura-status', function () {
+    $order = \App\Models\Order::whereIn('document_type', ['Factura', 'Boleta'])
+        ->orderByDesc('created_at')
+        ->first();
+
+    if (!$order) {
+        return response()->json(['error' => 'No hay facturas ni boletas.'], 404);
+    }
+
+    $updated = (new \App\Services\Sunat\NubeFactService())->syncOrderStatusFromQuery($order->fresh('details.product'));
+
+    return response()->json([
+        'order_id' => $updated->id,
+        'full_number' => $updated->full_number,
+        'sunat_status' => $updated->sunat_status,
+        'sunat_description' => $updated->sunat_description,
+        'sunat_code' => $updated->sunat_code,
+        'pdf_path' => $updated->pdf_path,
+        'xml_path' => $updated->xml_path,
+        'cdr_path' => $updated->cdr_path,
+        'hash' => $updated->hash,
+    ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+})->name('debug.sync.last.invoice.status');
+
 // Web Informativa Pública (Landing) — página de inicio por defecto
 Route::get('/', [App\Http\Controllers\LandingController::class, 'index'])->name('landing.index');
 Route::get('/inicio', [App\Http\Controllers\LandingController::class, 'index'])->name('landing.home');

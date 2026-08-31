@@ -216,6 +216,56 @@ class NubeFactService
         return $this->send($json);
     }
 
+    /**
+     * Sincroniza el estado local de una factura/boleta usando la consulta a NubeFact.
+     * Útil cuando la orden quedó en PENDING aunque la respuesta del servicio ya indicó aceptación.
+     */
+    public function syncOrderStatusFromQuery(Order $order): Order
+    {
+        if (!$order->serie || !$order->correlativo) {
+            throw new \RuntimeException('La orden no tiene serie/correlativo asignados.');
+        }
+
+        $response = $this->queryDocument(
+            $order->document_type === 'Factura' ? '1' : '2',
+            $order->serie,
+            (int) $order->correlativo
+        );
+
+        $order->sent_at = $order->sent_at ?? now();
+        $order->sunat_code = $response['sunat_responsecode'] ?? $response['codigo'] ?? $order->sunat_code;
+        $order->sunat_description = $response['sunat_description'] ?? $response['errors'] ?? $order->sunat_description;
+
+        if (array_key_exists('aceptada_por_sunat', $response)) {
+            if ((bool) $response['aceptada_por_sunat'] === true) {
+                $order->sunat_status = 'ACCEPTED';
+            } else {
+                $order->sunat_status = 'OBSERVED';
+            }
+        }
+
+        if (!empty($response['enlace_del_pdf'])) {
+            $order->pdf_path = $response['enlace_del_pdf'];
+        } elseif (!empty($response['enlace'])) {
+            $order->pdf_path = rtrim($response['enlace'], '/') . '.pdf';
+        }
+        if (!empty($response['enlace_del_xml'])) {
+            $order->xml_path = $response['enlace_del_xml'];
+        } elseif (!empty($response['enlace'])) {
+            $order->xml_path = rtrim($response['enlace'], '/') . '.xml';
+        }
+        if (!empty($response['enlace_del_cdr'])) {
+            $order->cdr_path = $response['enlace_del_cdr'];
+        } elseif (!empty($response['enlace'])) {
+            $order->cdr_path = rtrim($response['enlace'], '/') . '.cdr';
+        }
+
+        $order->hash = $response['codigo_hash'] ?? $order->hash;
+        $order->save();
+
+        return $order;
+    }
+
     // ═══════════════════════════════════════════════════════════════
     //  PAYLOAD QR (para representación impresa)
     // ═══════════════════════════════════════════════════════════════
