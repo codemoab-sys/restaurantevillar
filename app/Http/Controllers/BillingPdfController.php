@@ -84,6 +84,11 @@ class BillingPdfController extends Controller
     public function ticket(Order $order)
     {
         abort_unless(in_array($order->document_type, ['Boleta', 'Factura']), 404);
+
+        if (empty($order->pdf_path) && $order->serie && $order->correlativo) {
+            $this->refreshDocumentLinks($order);
+        }
+
         $order->load('details.product');
 
         return view('billing.pdf.ticket', [
