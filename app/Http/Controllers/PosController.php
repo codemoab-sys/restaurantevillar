@@ -13,7 +13,7 @@ use App\Models\Client;
 use App\Models\Setting;
 use App\Models\DocumentSeries;
 use App\Services\Sunat\SunatConfig;
-use App\Services\Sunat\SunatService;
+use App\Services\Sunat\NubeFactService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -530,23 +530,52 @@ class PosController extends Controller
 
         });
 
-        // 3. Envío a SUNAT (no bloqueante: si falla queda en ERROR y puede reintentarse desde Billing)
+        // 3. Envío a NubeFact (con reintentos automáticos de hasta 3 intentos)
         if ($order->isElectronic()) {
-            try {
-                (new SunatService())->sendInvoice($order->fresh('details.product'));
-            } catch (\Throwable $e) {
-                Log::error('Error al enviar a SUNAT', [
-                    'order_id' => $order->id,
-                    'error' => $e->getMessage(),
-                ]);
-                // No interrumpimos la venta; queda PENDING/ERROR para reintento manual.
+            $maxRetries = 3;
+            $retryDelay = 1; // segundos entre reintentos
+            $sent = false;
+
+            for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+                try {
+                    (new NubeFactService())->sendInvoice($order->fresh('details.product'));
+                    $order->fresh(); // Recargar para ver el estado actualizado
+
+                    // Si llegó aquí sin excepción, se envió exitosamente
+                    $sent = true;
+                    break;
+                } catch (\Throwable $e) {
+                    Log::warning('Intento ' . $attempt . ' de envío a NubeFact fallido', [
+                        'order_id' => $order->id,
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    // Si hay reintentos pendientes, esperar antes de reintentar
+                    if ($attempt < $maxRetries) {
+                        sleep($retryDelay);
+                    } else {
+                        Log::error('Agotados reintentos de envío a NubeFact', [
+                            'order_id' => $order->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
             }
         }
 
+        $order->refresh();
         $msg = 'Venta registrada.';
         if ($order->isElectronic()) {
-            $order->refresh();
-            $msg .= ' Comprobante ' . $order->full_number . ' - ' . ($order->sunat_description ?? $order->sunat_status);
+            // Mostrar estado actual del envío a NubeFact
+            if ($order->sunat_status === 'ACCEPTED') {
+                $msg .= ' Comprobante ' . $order->full_number . ' aceptado por SUNAT.';
+            } elseif ($order->sunat_status === 'OBSERVED') {
+                $msg .= ' Comprobante ' . $order->full_number . ' observado: ' . ($order->sunat_description ?? 'Ver detalles');
+            } elseif ($order->sunat_status === 'REJECTED') {
+                $msg .= ' Comprobante ' . $order->full_number . ' rechazado: ' . ($order->sunat_description ?? 'Error desconocido');
+            } else {
+                $msg .= ' Comprobante ' . $order->full_number . ' - ' . $order->sunat_status . '. Intenta reenviar desde Comprobantes.';
+            }
         }
 
         if ($request->expectsJson()) {
