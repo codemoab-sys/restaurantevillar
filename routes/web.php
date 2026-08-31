@@ -36,6 +36,26 @@ Route::get('/uploaded-assets/{path}', [App\Http\Controllers\PublicAssetControlle
 // Menú Digital Público (Escaneo QR)
 Route::get('/menu', [App\Http\Controllers\MenuController::class, 'index'])->name('menu.index');
 
+// Debug temporal: devuelve el JSON exacto que se construiría para la última factura/boleta
+Route::get('/debug/ultima-factura-json', function () {
+    $order = \App\Models\Order::whereIn('document_type', ['Factura', 'Boleta'])
+        ->orderByDesc('created_at')
+        ->first();
+
+    if (!$order) {
+        return response()->json([
+            'error' => 'No hay facturas ni boletas en la base de datos.',
+        ], 404);
+    }
+
+    $order->loadMissing('details.product', 'client');
+
+    $payload = (new \App\Services\Sunat\NubeFactInvoiceBuilder(new \App\Services\Sunat\SunatConfig()))
+        ->build($order);
+
+    return response()->json($payload, 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+})->name('debug.last.invoice.json');
+
 // Web Informativa Pública (Landing) — página de inicio por defecto
 Route::get('/', [App\Http\Controllers\LandingController::class, 'index'])->name('landing.index');
 Route::get('/inicio', [App\Http\Controllers\LandingController::class, 'index'])->name('landing.home');
