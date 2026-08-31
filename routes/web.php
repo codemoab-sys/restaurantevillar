@@ -56,6 +56,32 @@ Route::get('/debug/ultima-factura-json', function () {
     return response()->json($payload, 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 })->name('debug.last.invoice.json');
 
+// Debug temporal: lista todas las facturas/boletas ordenadas por serie y correlativo
+Route::get('/debug/todas-facturas-json', function () {
+    $orders = \App\Models\Order::whereIn('document_type', ['Factura', 'Boleta'])
+        ->orderByRaw('CASE WHEN serie IS NULL THEN 1 ELSE 0 END ASC')
+        ->orderBy('serie', 'asc')
+        ->orderByRaw('CAST(correlativo AS UNSIGNED) ASC')
+        ->get();
+
+    return response()->json([
+        'total' => $orders->count(),
+        'facturas' => $orders->map(function ($order) {
+            return [
+                'id' => $order->id,
+                'document_type' => $order->document_type,
+                'full_number' => $order->full_number,
+                'serie' => $order->serie,
+                'correlativo' => $order->correlativo,
+                'client_name' => $order->client_name,
+                'client_document' => $order->client_document,
+                'total' => (float) $order->total,
+                'created_at' => $order->created_at?->toDateTimeString(),
+            ];
+        })->values(),
+    ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+})->name('debug.all.invoice.json');
+
 // Web Informativa Pública (Landing) — página de inicio por defecto
 Route::get('/', [App\Http\Controllers\LandingController::class, 'index'])->name('landing.index');
 Route::get('/inicio', [App\Http\Controllers\LandingController::class, 'index'])->name('landing.home');

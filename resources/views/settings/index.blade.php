@@ -39,18 +39,6 @@
                         <h5 class="fw-bold text-primary mb-3">Región y Sistema</h5>
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
-                                <label class="form-label fw-bold"><i class="bi bi-clock"></i> Zona Horaria</label>
-                                <select name="timezone" class="form-select bg-light border-primary">
-                                    @foreach($timezones as $tz => $label)
-                                        <option value="{{ $tz }}" {{ ($settings['timezone'] ?? 'America/Lima') == $tz ? 'selected' : '' }}>
-                                            {{ $label }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                <small class="text-muted">Hora actual del sistema: <strong>{{ \Carbon\Carbon::now()->format('H:i:s') }}</strong></small>
-                            </div>
-
-                            <div class="col-md-3">
                                 <label class="form-label fw-bold">Moneda</label>
                                 <select name="currency_symbol" class="form-select">
                                     <option value="S/" {{ ($settings['currency_symbol'] ?? '') == 'S/' ? 'selected' : '' }}>S/ (Soles)</option>

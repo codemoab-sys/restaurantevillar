@@ -29,21 +29,7 @@ class SettingController extends Controller
             }
         }
 
-        $timezones = [
-            'America/Lima' => '(UTC-05:00) Lima, Bogotá, Quito',
-            'America/Caracas' => '(UTC-04:00) Caracas',
-            'America/La_Paz' => '(UTC-04:00) La Paz',
-            'America/Santiago' => '(UTC-03:00) Santiago',
-            'America/Argentina/Buenos_Aires' => '(UTC-03:00) Buenos Aires',
-            'America/Montevideo' => '(UTC-03:00) Montevideo',
-            'America/Mexico_City' => '(UTC-06:00) Ciudad de México',
-            'America/Tijuana' => '(UTC-08:00) Tijuana',
-            'America/New_York' => '(UTC-05:00) Hora del Este (EE.UU.)',
-            'Europe/Madrid' => '(UTC+01:00) Madrid',
-            'UTC' => '(UTC+00:00) Tiempo Universal Coordinado'
-        ];
-
-        return view('settings.index', compact('settings', 'timezones'));
+        return view('settings.index', compact('settings'));
     }
 
     public function update(Request $request)
@@ -52,7 +38,6 @@ class SettingController extends Controller
             'company_name' => ['nullable', 'string', 'max:255'],
             'company_phone' => ['nullable', 'string', 'max:30'],
             'company_address' => ['nullable', 'string', 'max:255'],
-            'timezone' => ['nullable', 'timezone'],
             'currency_symbol' => ['nullable', 'in:S/,$,€'],
             'ticket_footer' => ['nullable', 'string', 'max:1000'],
             'color_primary' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
@@ -125,7 +110,7 @@ class SettingController extends Controller
         }
 
         $allowedSettings = [
-            'company_name', 'company_phone', 'company_address', 'timezone',
+            'company_name', 'company_phone', 'company_address',
             'currency_symbol', 'ticket_footer', 'color_primary', 'color_primary_hover',
             'color_primary_soft', 'color_sidebar_bg', 'color_sidebar_active', 'brand_text_color',
             'sunat_ruc', 'sunat_razon_social', 'sunat_nombre_comercial',
