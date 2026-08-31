@@ -150,9 +150,15 @@
                     </div>
                     <div class="d-flex flex-column align-items-end gap-1">
                         <span class="fw-bold fs-6 text-success">{{ $currency ?? 'S/' }} {{ number_format($sale->total, 2) }}</span>
-                        <a href="{{ route('sales.ticket', $sale->id) }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-dark" title="Imprimir">
-                            <i class="bi bi-printer"></i> Imprimir
-                        </a>
+                        @if(in_array($sale->document_type, ['Boleta', 'Factura']))
+                            <a href="{{ route('billing.pdf', $sale) }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-dark" title="Imprimir">
+                                <i class="bi bi-printer"></i> Imprimir
+                            </a>
+                        @else
+                            <a href="{{ route('sales.ticket', $sale->id) }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-dark" title="Imprimir">
+                                <i class="bi bi-printer"></i> Imprimir
+                            </a>
+                        @endif
                     </div>
                 </div>
             </div>

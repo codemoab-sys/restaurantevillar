@@ -113,7 +113,11 @@
                                     </td>
                                     <td class="text-end fw-bold">{{ number_format($order->total, 2) }}</td>
                                     <td class="text-center">
-                                        <a href="{{ route('sales.ticket', $order->id) }}" target="_blank" class="btn btn-sm btn-outline-dark"><i class="bi bi-printer"></i></a>
+                                        @if(in_array($order->document_type, ['Boleta', 'Factura']))
+                                            <a href="{{ route('billing.pdf', $order) }}" target="_blank" class="btn btn-sm btn-outline-dark"><i class="bi bi-printer"></i></a>
+                                        @else
+                                            <a href="{{ route('sales.ticket', $order->id) }}" target="_blank" class="btn btn-sm btn-outline-dark"><i class="bi bi-printer"></i></a>
+                                        @endif
                                     </td>
                                 </tr>
                                 @empty
