@@ -31,20 +31,24 @@
                     $clientPhone = $order->client?->phone ?? '';
                     $whatsappBase = "📄 {$order->document_type} {$order->full_number}\n💰 Total: S/ " . number_format($order->total, 2) . "\n🔗 {$order->pdf_path}";
                 @endphp
-                <div class="btn-group">
-                    @if(!empty($clientPhone))
-                        <a href="https://wa.me/51{{ $clientPhone }}?text={{ urlencode($whatsappBase) }}" target="_blank" class="btn btn-success">
-                            <i class="bi bi-whatsapp"></i> WhatsApp
-                        </a>
-                    @else
-                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#whatsappModal">
-                            <i class="bi bi-whatsapp"></i> WhatsApp
-                        </button>
-                    @endif
-                    <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-                        <span class="visually-hidden">Opciones</span>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" title="Enviar" style="font-size:1.1rem;letter-spacing:2px;">
+                        ⋮
                     </button>
                     <ul class="dropdown-menu">
+                        @if(!empty($clientPhone))
+                            <li>
+                                <a href="https://wa.me/51{{ $clientPhone }}?text={{ urlencode($whatsappBase) }}" target="_blank" class="dropdown-item">
+                                    <i class="bi bi-whatsapp me-2 text-success"></i>WhatsApp: {{ $clientPhone }}
+                                </a>
+                            </li>
+                        @else
+                            <li>
+                                <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#whatsappModal">
+                                    <i class="bi bi-whatsapp me-2 text-success"></i>WhatsApp (pedir número)
+                                </button>
+                            </li>
+                        @endif
                         <li>
                             <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#emailModal">
                                 <i class="bi bi-envelope me-2"></i>Enviar por Correo

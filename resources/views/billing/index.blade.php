@@ -150,20 +150,24 @@
                                             $clientPhone = $o->client?->phone ?? '';
                                             $whatsappBase = "📄 {$o->document_type} {$o->full_number}\n💰 Total: S/ " . number_format($o->total, 2) . "\n🔗 {$o->pdf_path}";
                                         @endphp
-                                        <div class="btn-group btn-group-sm">
-                                            @if(!empty($clientPhone))
-                                                <a href="https://wa.me/51{{ $clientPhone }}?text={{ urlencode($whatsappBase) }}" target="_blank" class="btn btn-success" title="WhatsApp: {{ $clientPhone }}">
-                                                    <i class="bi bi-whatsapp"></i>
-                                                </a>
-                                            @else
-                                                <button type="button" class="btn btn-success" title="WhatsApp" data-bs-toggle="modal" data-bs-target="#whatsappModal-{{ $o->id }}">
-                                                    <i class="bi bi-whatsapp"></i>
-                                                </button>
-                                            @endif
-                                            <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" title="Enviar">
-                                                <span class="visually-hidden">Opciones</span>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" title="Enviar" style="font-size:1.1rem;letter-spacing:2px;">
+                                                ⋮
                                             </button>
                                             <ul class="dropdown-menu dropdown-menu-end">
+                                                @if(!empty($clientPhone))
+                                                    <li>
+                                                        <a href="https://wa.me/51{{ $clientPhone }}?text={{ urlencode($whatsappBase) }}" target="_blank" class="dropdown-item">
+                                                            <i class="bi bi-whatsapp me-2 text-success"></i>WhatsApp: {{ $clientPhone }}
+                                                        </a>
+                                                    </li>
+                                                @else
+                                                    <li>
+                                                        <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#whatsappModal-{{ $o->id }}">
+                                                            <i class="bi bi-whatsapp me-2 text-success"></i>WhatsApp (pedir número)
+                                                        </button>
+                                                    </li>
+                                                @endif
                                                 <li>
                                                     <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#emailModal-{{ $o->id }}">
                                                         <i class="bi bi-envelope me-2"></i>Correo
