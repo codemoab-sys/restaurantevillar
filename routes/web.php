@@ -82,6 +82,62 @@ Route::get('/debug/todas-facturas-json', function () {
     ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 })->name('debug.all.invoice.json');
 
+// Debug temporal: devuelve la respuesta cruda que NubeFact respondió para la última factura
+Route::get('/debug/ultima-factura-response', function () {
+    $order = \App\Models\Order::whereIn('document_type', ['Factura', 'Boleta'])
+        ->orderByDesc('created_at')
+        ->first();
+
+    if (!$order) {
+        return response()->json(['error' => 'No hay facturas ni boletas.'], 404);
+    }
+
+    $order->refresh();
+
+    $config = new \App\Services\Sunat\SunatConfig();
+    $ruta = $config->nubefactRuta();
+    $token = $config->nubefactToken();
+
+    if (!$ruta || !$token) {
+        return response()->json([
+            'error' => 'NubeFact no está configurado.',
+            'ruta' => $ruta,
+            'token_configurado' => (bool) $token,
+        ], 422);
+    }
+
+    $json = (new \App\Services\Sunat\NubeFactInvoiceBuilder($config))->build($order);
+
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $ruta,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($json, JSON_UNESCAPED_UNICODE),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 60,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: ' . $token,
+            'Content-Type: application/json',
+            'Accept: application/json',
+        ],
+        CURLOPT_SSL_VERIFYPEER => true,
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err = curl_error($ch);
+    curl_close($ch);
+
+    return response()->json([
+        'order_id' => $order->id,
+        'full_number' => $order->full_number,
+        'http_code' => $httpCode,
+        'curl_error' => $err ?: null,
+        'raw_body' => $response ?: null,
+        'decoded' => $response ? json_decode($response, true) : null,
+    ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+})->name('debug.last.invoice.response');
+
 // Web Informativa Pública (Landing) — página de inicio por defecto
 Route::get('/', [App\Http\Controllers\LandingController::class, 'index'])->name('landing.index');
 Route::get('/inicio', [App\Http\Controllers\LandingController::class, 'index'])->name('landing.home');
