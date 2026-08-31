@@ -530,6 +530,8 @@ class PosController extends Controller
 
         });
 
+        $order->refresh();
+
         // 3. Envío a NubeFact (con reintentos automáticos de hasta 3 intentos)
         if ($order->isElectronic()) {
             $maxRetries = 3;

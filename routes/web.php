@@ -163,6 +163,69 @@ Route::get('/debug/sync-ultima-factura-status', function () {
     ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 })->name('debug.sync.last.invoice.status');
 
+// Debug: intenta enviar manualmente la última factura y muestra TODOS los detalles
+Route::get('/debug/manual-send-ultima-factura', function () {
+    $order = \App\Models\Order::whereIn('document_type', ['Factura', 'Boleta'])
+        ->orderByDesc('created_at')
+        ->first();
+
+    if (!$order) {
+        return response()->json(['error' => 'No hay facturas ni boletas.'], 404);
+    }
+
+    $order->load('details.product', 'client');
+
+    // Validar configuración de NubeFact
+    $config = new \App\Services\Sunat\SunatConfig();
+    if (!$config->isNubefactConfigured()) {
+        return response()->json([
+            'error' => 'NubeFact no está configurado',
+            'ruta' => $config->nubefactRuta(),
+            'token' => $config->nubefactToken() ? 'Configurado' : 'No configurado',
+        ], 422);
+    }
+
+    // Construir el JSON
+    try {
+        $json = (new \App\Services\Sunat\NubeFactInvoiceBuilder($config))->build($order);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'error_building_json' => $e->getMessage(),
+            'order_id' => $order->id,
+            'document_type' => $order->document_type,
+            'serie' => $order->serie,
+            'correlativo' => $order->correlativo,
+        ], 422);
+    }
+
+    // Intentar enviar
+    try {
+        $service = new \App\Services\Sunat\NubeFactService($config);
+        $service->sendInvoice($order);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'error_sending' => $e->getMessage(),
+            'order_id' => $order->id,
+            'trace' => $e->getTraceAsString(),
+            'json_enviado' => $json,
+        ], 422);
+    }
+
+    $order->fresh();
+    return response()->json([
+        'success' => true,
+        'order_id' => $order->id,
+        'full_number' => $order->full_number,
+        'sunat_status' => $order->sunat_status,
+        'sunat_description' => $order->sunat_description,
+        'sunat_code' => $order->sunat_code,
+        'pdf_path' => $order->pdf_path,
+        'xml_path' => $order->xml_path,
+        'cdr_path' => $order->cdr_path,
+        'hash' => $order->hash,
+    ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+})->name('debug.manual.send.ultima.factura');
+
 // Web Informativa Pública (Landing) — página de inicio por defecto
 Route::get('/', [App\Http\Controllers\LandingController::class, 'index'])->name('landing.index');
 Route::get('/inicio', [App\Http\Controllers\LandingController::class, 'index'])->name('landing.home');
