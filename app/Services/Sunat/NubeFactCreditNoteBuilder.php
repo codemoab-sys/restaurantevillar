@@ -30,7 +30,10 @@ class NubeFactCreditNoteBuilder
         $igvFactor = $this->config->igvFactor();
         $denom     = 1 + $igvFactor;
 
-        // ═══ ITEMS (replicamos los del comprobante afectado) ════════
+        // Motivos 03 y 13: solo corrección de texto, montos en 0
+        $zeroAmounts = in_array($cn->reason_code, ['03', '13']);
+
+        // ═══ ITEMS ══════════════════════════════════════════════════
         $items        = [];
         $totalGravada = 0.0;
         $totalIgv     = 0.0;
@@ -44,21 +47,23 @@ class NubeFactCreditNoteBuilder
             $igvLinea        = round($valorVenta * $igvFactor, 2);
             $subtotalLinea   = round($valorVenta + $igvLinea, 2);
 
-            $totalGravada += $valorVenta;
-            $totalIgv     += $igvLinea;
+            if (!$zeroAmounts) {
+                $totalGravada += $valorVenta;
+                $totalIgv     += $igvLinea;
+            }
 
             $items[] = [
                 'unidad_de_medida' => 'NIU',
                 'codigo'           => (string) ($product->id ?? '001'),
                 'descripcion'      => $product->name ?? 'Producto',
-                'cantidad'         => $cantidad,
-                'valor_unitario'   => $valorUnit,
-                'precio_unitario'  => round($precioVentaUnit, 2),
+                'cantidad'         => $zeroAmounts ? 0 : $cantidad,
+                'valor_unitario'   => $zeroAmounts ? 0 : $valorUnit,
+                'precio_unitario'  => $zeroAmounts ? 0 : round($precioVentaUnit, 2),
                 'descuento'        => '',
-                'subtotal'         => $valorVenta,
+                'subtotal'         => $zeroAmounts ? 0 : $valorVenta,
                 'tipo_de_igv'      => 1,
-                'igv'              => $igvLinea,
-                'total'            => $subtotalLinea,
+                'igv'              => $zeroAmounts ? 0 : $igvLinea,
+                'total'            => $zeroAmounts ? 0 : $subtotalLinea,
                 'anticipo_regularizacion' => false,
                 'anticipo_documento_serie' => '',
                 'anticipo_documento_numero' => '',
@@ -66,9 +71,9 @@ class NubeFactCreditNoteBuilder
         }
 
         // ═══ TOTALES ════════════════════════════════════════════════
-        $totalGravada = round($totalGravada, 2);
-        $totalIgv     = round($totalIgv, 2);
-        $totalVenta   = round($totalGravada + $totalIgv, 2);
+        $totalGravada = $zeroAmounts ? 0 : round($totalGravada, 2);
+        $totalIgv     = $zeroAmounts ? 0 : round($totalIgv, 2);
+        $totalVenta   = $zeroAmounts ? 0 : round($totalGravada + $totalIgv, 2);
 
         // ═══ DOCUMENTO DEL CLIENTE ══════════════════════════════════
         $client = $order->client;
