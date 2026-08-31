@@ -2,6 +2,38 @@
 
 @section('content')
 <div class="container-fluid">
+    @if(session('success'))
+        @php $printOrderId = session('last_order_id'); @endphp
+        <div class="alert alert-success border-0 shadow-sm rounded-3 d-flex align-items-center justify-content-between mb-3">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-check-circle-fill fs-4 me-2"></i>
+                <span>{{ session('success') }}</span>
+            </div>
+            <div class="d-flex gap-2">
+                @if($printOrderId)
+                    @php
+                        $printOrder = \App\Models\Order::find($printOrderId);
+                        $printRoute = $printOrder && in_array($printOrder->document_type, ['Boleta','Factura'])
+                            ? route('billing.pdf.ticket', $printOrderId)
+                            : route('sales.ticket', $printOrderId);
+                    @endphp
+                    <a href="{{ $printRoute }}" target="_blank" class="btn btn-sm btn-dark">
+                        <i class="bi bi-printer me-1"></i> Imprimir
+                    </a>
+                @endif
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-danger border-0 shadow-sm rounded-3 d-flex align-items-center justify-content-between mb-3">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-exclamation-triangle-fill fs-4 me-2"></i>
+                <span>{{ session('error') }}</span>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold text-dark mb-0">Punto de Venta</h2>

@@ -12,10 +12,22 @@
     </div>
 @endif
 @if(session('success'))
+    @php $printOrderId = session('last_order_id'); @endphp
     <div style="position:fixed;top:12px;right:20px;left:235px;z-index:901;">
         <div class="alert alert-success border-dismiss shadow rounded-3 d-flex align-items-center mb-0">
             <i class="bi bi-check-circle-fill fs-4 me-2 text-success"></i>
             <div class="flex-1 flex-grow-1">{{ session('success') }}</div>
+            @if($printOrderId)
+                @php
+                    $printOrder = \App\Models\Order::find($printOrderId);
+                    $printRoute = $printOrder && in_array($printOrder->document_type, ['Boleta','Factura'])
+                        ? route('billing.pdf.ticket', $printOrderId)
+                        : route('sales.ticket', $printOrderId);
+                @endphp
+                <a href="{{ $printRoute }}" target="_blank" class="btn btn-sm btn-dark ms-2">
+                    <i class="bi bi-printer me-1"></i> Imprimir
+                </a>
+            @endif
             <button type="button" class="btn-close ms-3" data-bs-dismiss="alert"></button>
         </div>
     </div>

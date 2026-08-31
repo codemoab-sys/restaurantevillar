@@ -584,11 +584,14 @@ class PosController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => $msg,
+                'order_id' => $order->id,
                 'redirect' => route('pos.index'),
             ]);
         }
 
-        return redirect()->route('pos.index')->with('success', $msg);
+        return redirect()->route('pos.index')
+            ->with('success', $msg)
+            ->with('last_order_id', $order->id);
     }
 
     private function recalculateTotal(Order $order)
