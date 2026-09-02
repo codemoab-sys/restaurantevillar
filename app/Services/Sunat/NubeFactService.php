@@ -71,7 +71,7 @@ class NubeFactService
                         ? 'PENDING'
                         : 'OBSERVED';
                     $order->sunat_description = $response['sunat_description']
-                        ?? ($order->sunat_status === 'PENDING' ? 'Pendiente de generación en NubeFact' : 'Observada por SUNAT');
+                        ?? ($order->sunat_status === 'PENDING' ? 'Pendiente de generación. Consulta el estado más tarde.' : 'Observada por SUNAT');
                 }
 
                 // Guardar enlace del PDF/XML/CDR si existen
