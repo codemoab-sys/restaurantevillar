@@ -7,6 +7,7 @@ use App\Models\Setting;
 use App\Mail\InvoiceMail;
 use App\Services\Sunat\SunatService;
 use App\Services\Sunat\NubeFactService;
+use App\Services\Sunat\SunatConfig;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -75,7 +76,8 @@ class BillingController extends Controller
     {
         abort_unless(in_array($order->document_type, ['Boleta', 'Factura']), 404);
         $order->load('details.product', 'creditNotes');
-        return view('billing.show', compact('order'));
+        $igvRate = (new SunatConfig())->igvRate();
+        return view('billing.show', compact('order', 'igvRate'));
     }
 
     /**

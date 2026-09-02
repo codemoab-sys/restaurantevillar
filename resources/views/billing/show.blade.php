@@ -120,7 +120,7 @@
                         <tfoot>
                             <tr><th colspan="3" class="text-end">Op. Gravada:</th>
                                 <td class="text-end">S/ {{ number_format($order->total_gravada, 2) }}</td></tr>
-                            <tr><th colspan="3" class="text-end">IGV (18%):</th>
+                            <tr><th colspan="3" class="text-end">IGV ({{ rtrim(rtrim(number_format($igvRate, 2, '.', ''), '0'), '.') }}%):</th>
                                 <td class="text-end">S/ {{ number_format($order->igv, 2) }}</td></tr>
                             <tr class="table-success">
                                 <th colspan="3" class="text-end">TOTAL:</th>
