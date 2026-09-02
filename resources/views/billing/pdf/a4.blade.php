@@ -71,7 +71,7 @@
     <div class="client">
         <div><strong>Cliente:</strong> {{ $order->client_name ?: 'Cliente Varios' }}</div>
         <div><strong>{{ $order->document_type === 'Factura' ? 'RUC' : 'DNI' }}:</strong> {{ $order->client_document ?: '—' }}</div>
-        <div><strong>Fecha emisión:</strong> {{ $order->created_at->format('d/m/Y H:i') }}</div>
+        <div><strong>Fecha emisión:</strong> {{ ($order->issued_at ?? $order->created_at)->format('d/m/Y H:i') }}</div>
         <div><strong>Moneda:</strong> SOLES (S/)</div>
     </div>
 

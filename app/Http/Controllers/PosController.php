@@ -41,7 +41,7 @@ class PosController extends Controller
         // Últimas 5 ventas para el panel de "Últimas Ventas"
         $lastSales = Order::where('status', 'completed')
             ->with('client')
-            ->orderBy('created_at', 'desc')
+            ->orderByRaw('COALESCE(issued_at, created_at) DESC')
             ->take(5)
             ->get();
 
@@ -88,7 +88,7 @@ class PosController extends Controller
 
         $lastSales = Order::where('status', 'completed')
             ->with('client')
-            ->orderBy('created_at', 'desc')
+            ->orderByRaw('COALESCE(issued_at, created_at) DESC')
             ->take(5)
             ->get();
 
@@ -461,6 +461,7 @@ class PosController extends Controller
 
             $order->update([
                 'status' => 'completed',
+                'issued_at' => now(),
                 'payment_method' => $method,
                 'received_amount' => $received,
                 'change_amount' => $change,

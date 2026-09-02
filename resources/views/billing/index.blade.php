@@ -119,7 +119,7 @@
                                 </span>
                                 <span class="fw-bold ms-1">{{ $o->full_number }}</span>
                             </td>
-                            <td class="small">{{ $o->created_at->format('d/m/Y H:i') }}</td>
+                            <td class="small">{{ ($o->issued_at ?? $o->created_at)->format('d/m/Y H:i') }}</td>
                             <td class="small">
                                 <div>{{ $o->client_name ?: 'Cliente' }}</div>
                                 <div class="text-muted">{{ $o->client_document }}</div>

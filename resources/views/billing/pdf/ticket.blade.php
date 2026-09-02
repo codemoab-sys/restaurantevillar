@@ -42,7 +42,7 @@
 <hr>
 
 <div>
-    <div><span class="bold">Fecha:</span> {{ $order->created_at->format('d/m/Y H:i') }}</div>
+    <div><span class="bold">Fecha:</span> {{ ($order->issued_at ?? $order->created_at)->format('d/m/Y H:i') }}</div>
     <div><span class="bold">Cliente:</span> {{ $order->client_name ?: 'Cliente Varios' }}</div>
     <div><span class="bold">{{ $order->document_type === 'Factura' ? 'RUC' : 'DNI' }}:</span> {{ $order->client_document ?: '—' }}</div>
 </div>

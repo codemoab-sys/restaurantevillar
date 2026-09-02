@@ -122,7 +122,7 @@ class NubeFactInvoiceBuilder
         $clienteEmail = $client?->email ?? '';
 
         // ═══ FECHA ══════════════════════════════════════════════════
-        $fechaEmision = now()->format('d-m-Y');
+        $fechaEmision = ($order->issued_at ?? now())->format('d-m-Y');
 
         // ═══ JSON CABECERA ══════════════════════════════════════════
         $json = [

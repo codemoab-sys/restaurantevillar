@@ -224,7 +224,7 @@ foreach($categories as $cat) {
                             <span class="text-muted small fw-bold">#{{ str_pad($sale->id, 6, '0', STR_PAD_LEFT) }}</span>
                         </div>
                         <div class="fw-bold text-truncate" style="max-width: 180px;">{{ $clientName }}</div>
-                        <div class="small text-muted">{{ \Carbon\Carbon::parse($sale->created_at)->format('d/m H:i') }}</div>
+                        <div class="small text-muted">{{ ($sale->issued_at ?? $sale->created_at)->format('d/m H:i') }}</div>
                     </div>
                     <div class="d-flex flex-column align-items-end gap-1">
                         <span class="fw-bold fs-6 text-success">{{ $currency }} {{ number_format($sale->total, 2) }}</span>

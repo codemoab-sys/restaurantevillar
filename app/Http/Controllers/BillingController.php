@@ -8,6 +8,7 @@ use App\Mail\InvoiceMail;
 use App\Services\Sunat\SunatService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -31,7 +32,7 @@ class BillingController extends Controller
             ->whereIn('document_type', ['Boleta', 'Factura'])
             ->whereNotNull('serie')
             ->whereNotNull('correlativo')
-            ->orderByDesc('created_at');
+            ->orderByRaw('COALESCE(issued_at, created_at) DESC');
 
         if ($s = $request->input('status')) {
             $query->where('sunat_status', $s);
@@ -40,10 +41,10 @@ class BillingController extends Controller
             $query->where('document_type', $t);
         }
         if ($from = $request->input('from')) {
-            $query->whereDate('created_at', '>=', $from);
+            $query->whereDate(DB::raw('COALESCE(issued_at, created_at)'), '>=', $from);
         }
         if ($to = $request->input('to')) {
-            $query->whereDate('created_at', '<=', $to);
+            $query->whereDate(DB::raw('COALESCE(issued_at, created_at)'), '<=', $to);
         }
         if ($q = $request->input('q')) {
             $query->where(function ($qq) use ($q) {
