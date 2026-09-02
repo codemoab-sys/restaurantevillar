@@ -111,7 +111,7 @@ class BillingController extends Controller
         return back()->with($order->sunat_status === 'ACCEPTED' ? 'success' : 'error', $msg);
     }
 
-    public function syncStatus(Order $order)
+    public function syncStatus(Request $request, Order $order)
     {
         abort_unless(in_array($order->document_type, ['Boleta', 'Factura']), 404);
 
