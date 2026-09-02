@@ -18,20 +18,6 @@
         </div>
     </div>
 
-    {{-- Mensajes flash --}}
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show">
-            {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
     {{-- Stats por estado --}}
     <div class="row g-3 mb-4">
         @foreach([
@@ -211,6 +197,17 @@
                                             <button class="btn btn-outline-warning" title="Consultar anulación"><i class="bi bi-arrow-repeat"></i></button>
                                         </form>
                                     @endif
+                                    @if($o->anulacion_status === 'ACCEPTED')
+                                        @if($o->anulacion_pdf_path)
+                                            <a href="{{ route('billing.cancellation.pdf', $o) }}" class="btn btn-outline-danger" title="PDF de anulación"><i class="bi bi-file-earmark-pdf"></i></a>
+                                        @endif
+                                        @if($o->anulacion_xml_path)
+                                            <a href="{{ route('billing.cancellation.xml', $o) }}" class="btn btn-outline-info" title="XML de anulación"><i class="bi bi-filetype-xml"></i></a>
+                                        @endif
+                                        @if($o->anulacion_cdr_path)
+                                            <a href="{{ route('billing.cancellation.cdr', $o) }}" class="btn btn-outline-success" title="CDR de anulación"><i class="bi bi-archive"></i></a>
+                                        @endif
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -238,7 +235,7 @@
                             <h6 class="modal-title fw-bold">Anular {{ $o->document_type }} {{ $o->full_number }}</h6>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                         </div>
-                        <form method="POST" action="{{ route('billing.cancel', $o) }}">
+                        <form method="POST" action="{{ route('billing.cancel', $o) }}" class="cancellation-form">
                             @csrf
                             <div class="modal-body">
                                 <label class="form-label small fw-bold">Motivo de anulación</label>
@@ -247,7 +244,7 @@
                             </div>
                             <div class="modal-footer py-2">
                                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Enviar esta anulación a NubeFact?')">Enviar anulación</button>
+                                <button type="submit" class="btn btn-danger btn-sm">Enviar anulación</button>
                             </div>
                         </form>
                     </div>
@@ -318,10 +315,41 @@
 function openWhatsApp(orderId, baseMsg) {
     const phone = document.getElementById('wa-phone-' + orderId).value.trim();
     if (!phone || phone.length < 9) {
-        alert('Ingresa un número de celular válido (9 dígitos).');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Número inválido',
+            text: 'Ingresa un número de celular válido de 9 dígitos.',
+            confirmButtonText: 'Entendido'
+        });
         return;
     }
     window.open('https://wa.me/51' + phone + '?text=' + encodeURIComponent(baseMsg), '_blank');
 }
 </script>
+
+@push('scripts')
+<script>
+    document.querySelectorAll('.cancellation-form').forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            Swal.fire({
+                icon: 'warning',
+                title: '¿Enviar anulación?',
+                text: 'NubeFact procesará el comprobante seleccionado. Esta operación no debe repetirse.',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, enviar',
+                cancelButtonText: 'Cancelar'
+            }).then(function (result) {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+        });
+    });
+
+</script>
+@endpush
 @endsection

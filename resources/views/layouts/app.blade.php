@@ -865,23 +865,6 @@
     </div>
     @endif
 
-    {{-- Flash Messages --}}
-    @if(session('success') && !request()->routeIs('settings.index', 'settings.update', 'pos.index', 'categories.index', 'products.index', 'tables.index'))
-        <div class="alert border-0 shadow-sm rounded-4 mb-4 d-flex align-items-center" style="background:#f0fdf4;border-left:4px solid #22c55e!important;">
-            <i class="bi bi-check-circle-fill fs-4 me-3 text-success"></i>
-            <div><strong>¡Éxito!</strong> {{ session('success') }}</div>
-            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
-    @if(session('error') && !request()->routeIs('settings.index', 'settings.update', 'categories.index', 'tables.index'))
-        <div class="alert border-0 shadow-sm rounded-4 mb-4 d-flex align-items-center" style="background:#fff1f2;border-left:4px solid #f43f5e!important;">
-            <i class="bi bi-exclamation-triangle-fill fs-4 me-3 text-danger"></i>
-            <div><strong>Error:</strong> {{ session('error') }}</div>
-            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
     @yield('content')
 </div>
 
@@ -953,14 +936,47 @@
     applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
 </script>
 
-@if(session('success') && request()->routeIs('pos.index'))
+@if(session('success') && !request()->routeIs('settings.index', 'settings.update', 'pos.index', 'categories.index', 'products.index', 'tables.index', 'billing.index'))
 <script>
     Swal.fire({
         icon: 'success',
-        title: 'Operación exitosa',
+        title: '¡Éxito!',
         text: @json(session('success')),
         timer: 2200,
         showConfirmButton: false
+    });
+</script>
+@endif
+
+@if(session('error') && !request()->routeIs('settings.index', 'settings.update', 'categories.index', 'products.index', 'tables.index', 'billing.index'))
+<script>
+    Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: @json(session('error')),
+        confirmButtonText: 'Entendido'
+    });
+</script>
+@endif
+
+@if(session('warning'))
+<script>
+    Swal.fire({
+        icon: 'warning',
+        title: 'Aviso',
+        text: @json(session('warning')),
+        confirmButtonText: 'Entendido'
+    });
+</script>
+@endif
+
+@if(session('info'))
+<script>
+    Swal.fire({
+        icon: 'info',
+        title: 'Información',
+        text: @json(session('info')),
+        confirmButtonText: 'Entendido'
     });
 </script>
 @endif

@@ -217,6 +217,24 @@ class BillingController extends Controller
         return $this->streamSunatFile($order->cdr_path, 'application/zip');
     }
 
+    public function downloadCancellationPdf(Order $order)
+    {
+        abort_unless(in_array($order->document_type, ['Boleta', 'Factura']), 404);
+        return $this->streamSunatFile($order->anulacion_pdf_path, 'application/pdf');
+    }
+
+    public function downloadCancellationXml(Order $order)
+    {
+        abort_unless(in_array($order->document_type, ['Boleta', 'Factura']), 404);
+        return $this->streamSunatFile($order->anulacion_xml_path, 'application/xml');
+    }
+
+    public function downloadCancellationCdr(Order $order)
+    {
+        abort_unless(in_array($order->document_type, ['Boleta', 'Factura']), 404);
+        return $this->streamSunatFile($order->anulacion_cdr_path, 'application/zip');
+    }
+
     /**
      * Consulta NubeFact solo cuando falta el enlace solicitado.
      */

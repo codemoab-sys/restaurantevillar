@@ -324,6 +324,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/billing/{order}/cancel/query', [BillingController::class, 'queryCancellation'])->name('billing.cancel.query');
         Route::get('/billing/{order}/xml',        [BillingController::class, 'downloadXml'])->name('billing.xml');
         Route::get('/billing/{order}/cdr',        [BillingController::class, 'downloadCdr'])->name('billing.cdr');
+        Route::get('/billing/{order}/cancellation/pdf', [BillingController::class, 'downloadCancellationPdf'])->name('billing.cancellation.pdf');
+        Route::get('/billing/{order}/cancellation/xml', [BillingController::class, 'downloadCancellationXml'])->name('billing.cancellation.xml');
+        Route::get('/billing/{order}/cancellation/cdr', [BillingController::class, 'downloadCancellationCdr'])->name('billing.cancellation.cdr');
         Route::get('/billing/{order}/pdf',        [\App\Http\Controllers\BillingPdfController::class, 'show'])->name('billing.pdf');
         Route::get('/billing/{order}/ticket',     [\App\Http\Controllers\BillingPdfController::class, 'ticket'])->name('billing.pdf.ticket');
         Route::post('/billing/{order}/send-email', [\App\Http\Controllers\BillingController::class, 'sendEmail'])->name('billing.sendEmail');
