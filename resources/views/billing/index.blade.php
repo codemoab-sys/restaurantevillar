@@ -177,7 +177,7 @@
                                             <i class="bi bi-archive"></i>
                                         </a>
                                     @endif
-                                    @if(in_array($o->sunat_status, ['PENDING','ERROR','REJECTED']))
+                                    @if(in_array($o->sunat_status, ['ERROR','REJECTED']))
                                         <form method="POST" action="{{ route('billing.retry', $o) }}" class="d-inline">
                                             @csrf
                                             <button class="btn btn-outline-warning" title="Reintentar envío"
@@ -189,7 +189,7 @@
                                     @if(in_array($o->sunat_status, ['PENDING', 'OBSERVED']) || $o->sunat_code === '23' || str_contains((string) $o->sunat_description, 'Este documento ya existe'))
                                         <form method="POST" action="{{ route('billing.sync', $o) }}" class="d-inline sync-status-form">
                                             @csrf
-                                            <button class="btn btn-outline-info" title="Consultar estado en NubeFact"><i class="bi bi-arrow-clockwise"></i></button>
+                                            <button class="btn btn-outline-info" title="Consultar estado"><i class="bi bi-arrow-clockwise"></i></button>
                                         </form>
                                     @endif
                                     @if($o->sunat_status === 'ACCEPTED' && $o->anulacion_status !== 'ACCEPTED')
@@ -246,7 +246,7 @@
                             <div class="modal-body">
                                 <label class="form-label small fw-bold">Motivo de anulación</label>
                                 <textarea name="motivo" class="form-control" maxlength="100" required placeholder="Ej: ERROR DE SISTEMA"></textarea>
-                                <small class="text-muted">NubeFact devolverá un ticket si la aceptación queda pendiente.</small>
+                                <small class="text-muted">El proveedor electrónico devolverá un ticket si la aceptación queda pendiente.</small>
                             </div>
                             <div class="modal-footer py-2">
                                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
@@ -323,7 +323,7 @@
             Swal.fire({
                 icon: 'error',
                 title: 'Error al consultar',
-                text: data.message || 'NubeFact no devolvió una respuesta válida.',
+                text: data.message || 'El proveedor electrónico no devolvió una respuesta válida.',
                 confirmButtonText: 'Entendido'
             });
             return;
@@ -336,7 +336,7 @@
 
         Swal.fire({
             icon: data.status === 'ACCEPTED' ? 'success' : 'info',
-            title: 'Respuesta de NubeFact',
+            title: 'Respuesta del proveedor electrónico',
             html: '<pre class="text-start small mb-0" style="max-height:55vh;overflow:auto;white-space:pre-wrap;">' + escapedJson + '</pre>',
             width: 700,
             confirmButtonText: 'Cerrar'
@@ -363,7 +363,7 @@
                 .then(function (response) { return response.json(); })
                 .then(showNubeFactResponse)
                 .catch(function () {
-                    Swal.fire({ icon: 'error', title: 'Error de conexión', text: 'No se pudo consultar NubeFact.' });
+                    Swal.fire({ icon: 'error', title: 'Error de conexión', text: 'No se pudo consultar el proveedor electrónico.' });
                 })
                 .finally(function () {
                     button.disabled = false;
@@ -396,7 +396,7 @@ function openWhatsApp(orderId, baseMsg) {
             Swal.fire({
                 icon: 'warning',
                 title: '¿Enviar anulación?',
-                text: 'NubeFact procesará el comprobante seleccionado. Esta operación no debe repetirse.',
+                text: 'El proveedor electrónico procesará el comprobante seleccionado. Esta operación no debe repetirse.',
                 showCancelButton: true,
                 confirmButtonColor: '#dc3545',
                 cancelButtonColor: '#6c757d',

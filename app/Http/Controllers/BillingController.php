@@ -92,7 +92,10 @@ class BillingController extends Controller
         }
 
         if ($order->sunat_code === '23' || str_contains((string) $order->sunat_description, 'Este documento ya existe')) {
-            return back()->with('info', 'El documento ya existe en NubeFact. Usa "Consultar estado"; no se volverá a enviar.');
+            return back()->with('info', 'El documento ya fue registrado por el proveedor electrónico. Usa "Consultar estado"; no se volverá a enviar.');
+        }
+        if ($order->sunat_status === 'PENDING') {
+            return back()->with('info', 'El comprobante está pendiente. Usa "Consultar estado"; no se volverá a enviar.');
         }
 
         try {
@@ -100,7 +103,7 @@ class BillingController extends Controller
             $order->refresh();
         } catch (\Throwable $e) {
             Log::error('Reintento SUNAT falló', ['order_id' => $order->id, 'msg' => $e->getMessage()]);
-            return back()->with('error', 'Excepción: ' . $e->getMessage());
+            return back()->with('error', 'No se pudo reenviar el comprobante. Revisa el detalle del error.');
         }
 
         $msg = "Comprobante {$order->full_number}: {$order->sunat_status}";
@@ -141,10 +144,10 @@ class BillingController extends Controller
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No se pudo consultar el comprobante: ' . $e->getMessage(),
+                    'message' => 'No se pudo consultar el comprobante. Revisa el detalle del error.',
                 ], 422);
             }
-            return back()->with('error', 'No se pudo consultar el comprobante: ' . $e->getMessage());
+            return back()->with('error', 'No se pudo consultar el comprobante. Revisa el detalle del error.');
         }
     }
 
@@ -182,7 +185,7 @@ class BillingController extends Controller
             );
         } catch (\Throwable $e) {
             Log::error('Anulación NubeFact falló', ['order_id' => $order->id, 'msg' => $e->getMessage()]);
-            return back()->with('error', 'No se pudo enviar la anulación: ' . $e->getMessage());
+            return back()->with('error', 'No se pudo enviar la anulación. Revisa el detalle del error.');
         }
     }
 
@@ -194,7 +197,7 @@ class BillingController extends Controller
         abort_unless(in_array($order->document_type, ['Boleta', 'Factura']), 404);
 
         if (!$order->anulacion_ticket && $order->anulacion_status !== 'PENDING') {
-            return back()->with('error', 'Este comprobante no tiene una anulación pendiente en NubeFact.');
+            return back()->with('error', 'Este comprobante no tiene una anulación pendiente.');
         }
 
         try {
@@ -213,7 +216,7 @@ class BillingController extends Controller
             );
         } catch (\Throwable $e) {
             Log::error('Consulta de anulación NubeFact falló', ['order_id' => $order->id, 'msg' => $e->getMessage()]);
-            return back()->with('error', 'No se pudo consultar la anulación: ' . $e->getMessage());
+            return back()->with('error', 'No se pudo consultar la anulación. Revisa el detalle del error.');
         }
     }
 

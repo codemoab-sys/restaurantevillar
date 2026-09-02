@@ -400,8 +400,8 @@ class PosController extends Controller
 
             if (!$config->isNubefactConfigured()) {
                 return $request->expectsJson()
-                    ? response()->json(['success' => false, 'message' => 'Completa RUC, razón social, ubigeo, RUTA y TOKEN de NubeFact antes de emitir.'], 422)
-                    : redirect()->back()->with('error', 'Completa RUC, razón social, ubigeo, RUTA y TOKEN de NubeFact antes de emitir.');
+                    ? response()->json(['success' => false, 'message' => 'Completa RUC, razón social, ubigeo, RUTA y TOKEN del proveedor electrónico antes de emitir.'], 422)
+                    : redirect()->back()->with('error', 'Completa RUC, razón social, ubigeo, RUTA y TOKEN del proveedor electrónico antes de emitir.');
             }
 
             if (!DocumentSeries::where('document_type', $seriesKey)->where('is_active', true)->exists()) {
@@ -533,37 +533,9 @@ class PosController extends Controller
 
         $order->refresh();
 
-        // 3. Envío a NubeFact (con reintentos automáticos de hasta 3 intentos)
+        // 3. Envío único al proveedor electrónico. Si queda pendiente, se consulta después.
         if ($order->isElectronic()) {
-            $maxRetries = 3;
-            $retryDelay = 1; // segundos entre reintentos
-            $sent = false;
-
-            for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
-                try {
-                    (new NubeFactService())->sendInvoice($order->fresh('details.product'));
-                    $order->fresh(); // Recargar para ver el estado actualizado
-
-                    // Si llegó aquí sin excepción, se envió exitosamente
-                    $sent = true;
-                    break;
-                } catch (\Throwable $e) {
-                    Log::warning('Intento ' . $attempt . ' de envío a NubeFact fallido', [
-                        'order_id' => $order->id,
-                        'error' => $e->getMessage(),
-                    ]);
-
-                    // Si hay reintentos pendientes, esperar antes de reintentar
-                    if ($attempt < $maxRetries) {
-                        sleep($retryDelay);
-                    } else {
-                        Log::error('Agotados reintentos de envío a NubeFact', [
-                            'order_id' => $order->id,
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
-                }
-            }
+            (new NubeFactService())->sendInvoice($order->fresh('details.product'));
         }
 
         $order->refresh();
@@ -576,8 +548,10 @@ class PosController extends Controller
                 $msg .= ' Comprobante ' . $order->full_number . ' observado: ' . ($order->sunat_description ?? 'Ver detalles');
             } elseif ($order->sunat_status === 'REJECTED') {
                 $msg .= ' Comprobante ' . $order->full_number . ' rechazado: ' . ($order->sunat_description ?? 'Error desconocido');
+            } elseif ($order->sunat_status === 'PENDING') {
+                $msg .= ' Comprobante ' . $order->full_number . ' pendiente. Consulta su estado desde Comprobantes.';
             } else {
-                $msg .= ' Comprobante ' . $order->full_number . ' - ' . $order->sunat_status . '. Intenta reenviar desde Comprobantes.';
+                $msg .= ' Comprobante ' . $order->full_number . ' - ' . $order->sunat_status . '. Revisa el detalle desde Comprobantes.';
             }
         }
 
