@@ -360,6 +360,18 @@ class PosController extends Controller
     }
 
     public function getSplitContent(Order $order) { $this->authorizePendingOrder($order); return view('pos.partials.split_content', compact('order')); }
+    public function checkoutModal(Order $order)
+    {
+        $this->authorizePendingOrder($order);
+        $clients = Client::select('id', 'name', 'document_number')->orderBy('name')->get();
+        $clientsData = $clients->map(fn ($client) => [
+            'id' => $client->id,
+            'name' => $client->name,
+            'document' => (string) ($client->document_number ?? ''),
+        ])->values();
+
+        return view('pos.partials.checkout_modal', compact('order', 'clientsData'));
+    }
     public function processSplit(Request $request, Order $order) { $this->authorizePendingOrder($order); return redirect()->back(); }
     public function precheck(Order $order) { $this->authorizeOrder($order); $settings = Setting::pluck('value', 'key')->toArray(); return view('sales.ticket', compact('order', 'settings')); }
     public function kitchenTicket(Order $order) { $this->authorizeOrder($order); return view('sales.kitchen_ticket', compact('order')); }

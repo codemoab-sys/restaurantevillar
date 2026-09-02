@@ -258,6 +258,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/pos/order/{order}/precheck', [PosController::class, 'precheck'])->name('pos.precheck');
     Route::get('/pos/order/{order}/kitchen-ticket', [PosController::class, 'kitchenTicket'])->name('pos.kitchen');
     Route::post('/pos/order/{order}/discount', [PosController::class, 'applyDiscount'])->name('pos.discount');
+    Route::get('/pos/order/{order}/checkout-modal', [PosController::class, 'checkoutModal'])->name('pos.checkout.modal');
     Route::post('/pos/order/{order}/move', [PosController::class, 'moveTable'])->name('pos.move');
 
     // División de Cuenta

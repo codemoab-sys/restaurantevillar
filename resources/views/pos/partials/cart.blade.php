@@ -1,4 +1,4 @@
-<div class="p-2">
+<div class="p-2" data-order-id="{{ $order?->id }}">
     @if($order && $order->details->count() > 0)
         <div class="table-responsive" style="overflow-x: hidden;">
             <table class="table table-borderless align-middle mb-0" style="width: 100%; table-layout: fixed;">

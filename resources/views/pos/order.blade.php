@@ -331,6 +331,7 @@ foreach($categories as $cat) {
     </div>
 </div>
 
+<div id="checkout-modal-container">
 @if($order)
 <div class="modal fade" id="checkoutModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -436,6 +437,7 @@ foreach($categories as $cat) {
     </div>
 </div>
 @endif
+</div>
 
 <script>
     const tableId = {{ $table->id }};
@@ -542,7 +544,24 @@ foreach($categories as $cat) {
             }
             document.getElementById('cart-container').innerHTML = html;
             updateCheckoutTotal();
+            ensureCheckoutModal();
         });
+    };
+
+    window.ensureCheckoutModal = function() {
+        if (document.getElementById('checkoutModal')) return;
+        var cartOrder = document.querySelector('#cart-container [data-order-id]');
+        var orderId = cartOrder ? cartOrder.getAttribute('data-order-id') : '';
+        if (!orderId) return;
+
+        fetch(`{{ url('/pos/order') }}/${orderId}/checkout-modal`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('checkout-modal-container').insertAdjacentHTML('beforeend', html);
+                initializeCheckoutForm();
+            });
     };
 
     window.updateQty = function(id, qty) {
@@ -838,6 +857,7 @@ foreach($categories as $cat) {
     }
 
     // Confirmar pago: evitar doble envío, mostrar spinner y alerta con SweetAlert2
+    window.initializeCheckoutForm = function() {
     var checkoutForm = document.getElementById('checkoutForm');
     if(checkoutForm) {
         var submittingPayment = false;
@@ -925,6 +945,9 @@ foreach($categories as $cat) {
             }
         });
     }
+    };
+
+    initializeCheckoutForm();
 </script>
 
 <style>
