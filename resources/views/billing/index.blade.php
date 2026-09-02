@@ -187,7 +187,7 @@
                                         </form>
                                     @endif
                                     @if(in_array($o->sunat_status, ['PENDING', 'OBSERVED']) || $o->sunat_code === '23' || str_contains((string) $o->sunat_description, 'Este documento ya existe'))
-                                        <form method="POST" action="{{ route('billing.sync', $o) }}" class="d-inline">
+                                        <form method="POST" action="{{ route('billing.sync', $o) }}" class="d-inline sync-status-form">
                                             @csrf
                                             <button class="btn btn-outline-info" title="Consultar estado en NubeFact"><i class="bi bi-arrow-clockwise"></i></button>
                                         </form>
@@ -318,6 +318,60 @@
 </div>
 
 <script>
+    function showNubeFactResponse(data) {
+        if (!data.success) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error al consultar',
+                text: data.message || 'NubeFact no devolvió una respuesta válida.',
+                confirmButtonText: 'Entendido'
+            });
+            return;
+        }
+
+        const json = JSON.stringify(data.response || {}, null, 2);
+        const escapedJson = json.replace(/[&<>"']/g, function (character) {
+            return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[character];
+        });
+
+        Swal.fire({
+            icon: data.status === 'ACCEPTED' ? 'success' : 'info',
+            title: 'Respuesta de NubeFact',
+            html: '<pre class="text-start small mb-0" style="max-height:55vh;overflow:auto;white-space:pre-wrap;">' + escapedJson + '</pre>',
+            width: 700,
+            confirmButtonText: 'Cerrar'
+        });
+    }
+
+    document.querySelectorAll('.sync-status-form').forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            const button = form.querySelector('button');
+            const original = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+            fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: new FormData(form)
+            })
+                .then(function (response) { return response.json(); })
+                .then(showNubeFactResponse)
+                .catch(function () {
+                    Swal.fire({ icon: 'error', title: 'Error de conexión', text: 'No se pudo consultar NubeFact.' });
+                })
+                .finally(function () {
+                    button.disabled = false;
+                    button.innerHTML = original;
+                });
+        });
+    });
+
 function openWhatsApp(orderId, baseMsg) {
     const phone = document.getElementById('wa-phone-' + orderId).value.trim();
     if (!phone || phone.length < 9) {

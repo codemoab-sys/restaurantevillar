@@ -116,13 +116,34 @@ class BillingController extends Controller
         abort_unless(in_array($order->document_type, ['Boleta', 'Factura']), 404);
 
         try {
-            $order = (new NubeFactService())->syncOrderStatusFromQuery($order);
+            $service = new NubeFactService();
+            $response = $service->queryDocument(
+                $order->document_type === 'Factura' ? '1' : '2',
+                $order->serie,
+                (int) $order->correlativo
+            );
+            $order = $service->syncOrderStatusFromQuery($order);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'status' => $order->sunat_status,
+                    'response' => $response,
+                ]);
+            }
+
             return back()->with(
                 $order->sunat_status === 'ACCEPTED' ? 'success' : 'info',
                 "Estado actualizado: {$order->sunat_status}. " . ($order->sunat_description ?? '')
             );
         } catch (\Throwable $e) {
             Log::error('Consulta de comprobante NubeFact falló', ['order_id' => $order->id, 'msg' => $e->getMessage()]);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo consultar el comprobante: ' . $e->getMessage(),
+                ], 422);
+            }
             return back()->with('error', 'No se pudo consultar el comprobante: ' . $e->getMessage());
         }
     }
