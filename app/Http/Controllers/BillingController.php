@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Setting;
 use App\Mail\InvoiceMail;
 use App\Services\Sunat\SunatService;
+use App\Services\Sunat\NubeFactService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -102,6 +103,94 @@ class BillingController extends Controller
         }
 
         return back()->with($order->sunat_status === 'ACCEPTED' ? 'success' : 'error', $msg);
+    }
+
+    /**
+     * Solicita a NubeFact la anulación de una factura o boleta.
+     */
+    public function cancel(Request $request, Order $order)
+    {
+        abort_unless(in_array($order->document_type, ['Boleta', 'Factura']), 404);
+
+        $request->validate(['motivo' => 'required|string|max:100']);
+
+        if ($order->sunat_status !== 'ACCEPTED') {
+            return back()->with('error', 'Solo se puede anular un comprobante aceptado por SUNAT.');
+        }
+        if ($order->anulacion_status === 'ACCEPTED') {
+            return back()->with('error', 'Este comprobante ya figura como anulado.');
+        }
+
+        try {
+            $response = (new NubeFactService())->voidDocument(
+                $order->document_type === 'Factura' ? '1' : '2',
+                $order->serie,
+                (int) $order->correlativo,
+                $request->input('motivo')
+            );
+
+            $this->storeCancellationResponse($order, $response);
+
+            return back()->with(
+                ($order->anulacion_status === 'ACCEPTED') ? 'success' : 'error',
+                $order->anulacion_status === 'ACCEPTED'
+                    ? 'Anulación aceptada por SUNAT.'
+                    : 'Anulación enviada. Consulta el estado con el botón de actualizar.'
+            );
+        } catch (\Throwable $e) {
+            Log::error('Anulación NubeFact falló', ['order_id' => $order->id, 'msg' => $e->getMessage()]);
+            return back()->with('error', 'No se pudo enviar la anulación: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Consulta en NubeFact una anulación enviada previamente.
+     */
+    public function queryCancellation(Order $order)
+    {
+        abort_unless(in_array($order->document_type, ['Boleta', 'Factura']), 404);
+
+        if (!$order->anulacion_ticket && $order->anulacion_status !== 'PENDING') {
+            return back()->with('error', 'Este comprobante no tiene una anulación pendiente en NubeFact.');
+        }
+
+        try {
+            $response = (new NubeFactService())->queryCancellation(
+                $order->document_type === 'Factura' ? '1' : '2',
+                $order->serie,
+                (int) $order->correlativo
+            );
+            $this->storeCancellationResponse($order, $response);
+
+            return back()->with(
+                $order->anulacion_status === 'ACCEPTED' ? 'success' : 'error',
+                $order->anulacion_status === 'ACCEPTED'
+                    ? 'Anulación aceptada por SUNAT.'
+                    : 'La anulación aún no ha sido aceptada por SUNAT.'
+            );
+        } catch (\Throwable $e) {
+            Log::error('Consulta de anulación NubeFact falló', ['order_id' => $order->id, 'msg' => $e->getMessage()]);
+            return back()->with('error', 'No se pudo consultar la anulación: ' . $e->getMessage());
+        }
+    }
+
+    private function storeCancellationResponse(Order $order, array $response): void
+    {
+        $accepted = ($response['aceptada_por_sunat'] ?? null) === true;
+        $hasError = isset($response['errors']);
+        $order->anulacion_status = $accepted ? 'ACCEPTED' : ($hasError ? 'ERROR' : 'PENDING');
+        $order->anulacion_ticket = $response['sunat_ticket_numero'] ?? $order->anulacion_ticket;
+        $order->anulacion_description = $response['sunat_description'] ?? $response['sunat_note'] ?? $response['errors'] ?? null;
+        $order->anulacion_pdf_path = $response['enlace_del_pdf'] ?? $order->anulacion_pdf_path;
+        $order->anulacion_xml_path = $response['enlace_del_xml'] ?? $order->anulacion_xml_path;
+        $order->anulacion_cdr_path = $response['enlace_del_cdr'] ?? $order->anulacion_cdr_path;
+        $order->anulacion_sent_at = $order->anulacion_sent_at ?? now();
+
+        if ($accepted) {
+            $order->sunat_status = 'VOIDED';
+        }
+
+        $order->save();
     }
 
     /**

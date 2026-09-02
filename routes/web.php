@@ -320,6 +320,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/billing',                    [BillingController::class, 'index'])->name('billing.index');
         Route::get('/billing/{order}',            [BillingController::class, 'show'])->name('billing.show');
         Route::post('/billing/{order}/retry',     [BillingController::class, 'retry'])->name('billing.retry');
+        Route::post('/billing/{order}/cancel',    [BillingController::class, 'cancel'])->name('billing.cancel');
+        Route::post('/billing/{order}/cancel/query', [BillingController::class, 'queryCancellation'])->name('billing.cancel.query');
         Route::get('/billing/{order}/xml',        [BillingController::class, 'downloadXml'])->name('billing.xml');
         Route::get('/billing/{order}/cdr',        [BillingController::class, 'downloadCdr'])->name('billing.cdr');
         Route::get('/billing/{order}/pdf',        [\App\Http\Controllers\BillingPdfController::class, 'show'])->name('billing.pdf');

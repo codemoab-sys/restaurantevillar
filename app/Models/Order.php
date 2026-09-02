@@ -22,6 +22,13 @@ protected $fillable = [
         'discount',
         'cash_register_id',
         'issued_at',
+        'anulacion_status',
+        'anulacion_ticket',
+        'anulacion_description',
+        'anulacion_pdf_path',
+        'anulacion_xml_path',
+        'anulacion_cdr_path',
+        'anulacion_sent_at',
 
         // Ã¢â€â‚¬Ã¢â€â‚¬ SUNAT Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
         'serie',
@@ -44,6 +51,7 @@ protected $fillable = [
 
     protected $casts = [
         'issued_at' => 'datetime',
+        'anulacion_sent_at' => 'datetime',
         'sent_at' => 'datetime',
         'subtotal' => 'decimal:2',
         'igv' => 'decimal:2',

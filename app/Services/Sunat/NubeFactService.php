@@ -264,6 +264,23 @@ class NubeFactService
         return $this->send($json);
     }
 
+    /**
+     * Consulta el estado de una anulación o comunicación de baja.
+     */
+    public function queryCancellation(string $tipoComprobante, string $serie, int $numero): array
+    {
+        if (!$this->config->isNubefactConfigured()) {
+            throw new \RuntimeException('NubeFact no está configurado.');
+        }
+
+        return $this->send([
+            'operacion'           => 'consultar_anulacion',
+            'tipo_de_comprobante' => (int) $tipoComprobante,
+            'serie'               => $serie,
+            'numero'              => $numero,
+        ]);
+    }
+
     // ═══════════════════════════════════════════════════════════════
     //  CONSULTAR COMPROBANTE
     // ═══════════════════════════════════════════════════════════════

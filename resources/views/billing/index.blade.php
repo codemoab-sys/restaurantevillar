@@ -200,6 +200,17 @@
                                             </button>
                                         </form>
                                     @endif
+                                    @if($o->sunat_status === 'ACCEPTED' && $o->anulacion_status !== 'ACCEPTED')
+                                        <button class="btn btn-outline-danger" title="Anular" data-bs-toggle="modal" data-bs-target="#cancelModal-{{ $o->id }}">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    @endif
+                                    @if($o->anulacion_status === 'PENDING')
+                                        <form method="POST" action="{{ route('billing.cancel.query', $o) }}" class="d-inline">
+                                            @csrf
+                                            <button class="btn btn-outline-warning" title="Consultar anulación"><i class="bi bi-arrow-repeat"></i></button>
+                                        </form>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -219,6 +230,30 @@
     </div>
 
     @foreach($orders as $o)
+        @if($o->sunat_status === 'ACCEPTED' && $o->anulacion_status !== 'ACCEPTED')
+            <div class="modal fade" id="cancelModal-{{ $o->id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-sm">
+                    <div class="modal-content">
+                        <div class="modal-header bg-danger text-white py-2">
+                            <h6 class="modal-title fw-bold">Anular {{ $o->document_type }} {{ $o->full_number }}</h6>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form method="POST" action="{{ route('billing.cancel', $o) }}">
+                            @csrf
+                            <div class="modal-body">
+                                <label class="form-label small fw-bold">Motivo de anulación</label>
+                                <textarea name="motivo" class="form-control" maxlength="100" required placeholder="Ej: ERROR DE SISTEMA"></textarea>
+                                <small class="text-muted">NubeFact devolverá un ticket si la aceptación queda pendiente.</small>
+                            </div>
+                            <div class="modal-footer py-2">
+                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Enviar esta anulación a NubeFact?')">Enviar anulación</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        @endif
         @if($o->pdf_path)
             @if(empty($o->client?->phone))
             <div class="modal fade" id="whatsappModal-{{ $o->id }}" tabindex="-1" aria-hidden="true">
