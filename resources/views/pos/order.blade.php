@@ -384,7 +384,7 @@ foreach($categories as $cat) {
                 <input type="hidden" id="hiddenTotal" value="{{ number_format($order->total, 2, '.', '') }}">
             </div>
             <div class="modal-footer p-2 bg-light">
-                <button type="submit" id="confirmPayBtn" class="btn btn-success w-100 btn-lg fw-bold">CONFIRMAR PAGO</button>
+                <button type="button" id="confirmPayBtn" class="btn btn-success w-100 btn-lg fw-bold">CONFIRMAR PAGO</button>
             </div>
         </form>
     </div>
@@ -841,6 +841,12 @@ foreach($categories as $cat) {
     var checkoutForm = document.getElementById('checkoutForm');
     if(checkoutForm) {
         var submittingPayment = false;
+        checkoutForm.addEventListener('keydown', function(e) {
+            if(e.key === 'Enter') {
+                e.preventDefault();
+            }
+        });
+
         checkoutForm.addEventListener('submit', function(e) {
             if(submittingPayment) {
                 e.preventDefault();
@@ -905,6 +911,12 @@ foreach($categories as $cat) {
                     confirmButtonText: 'Entendido'
                 });
             });
+        });
+
+        document.getElementById('confirmPayBtn').addEventListener('click', function() {
+            if (checkoutForm.reportValidity()) {
+                checkoutForm.requestSubmit();
+            }
         });
     }
 </script>
