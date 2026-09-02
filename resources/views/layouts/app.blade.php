@@ -782,9 +782,11 @@
         </a>
 
         <div class="menu-category">Gestión</div>
-        <a href="{{ route('clients.index') }}" class="nav-link {{ request()->routeIs('clients.*') ? 'active' : '' }}">
-            <i class="bi bi-people-fill"></i> Clientes
-        </a>
+        @if(in_array($role, ['admin', 'cashier', 'cashier_waiter', 'waiter']))
+            <a href="{{ route('clients.index') }}" class="nav-link {{ request()->routeIs('clients.*') ? 'active' : '' }}">
+                <i class="bi bi-people-fill"></i> Clientes
+            </a>
+        @endif
         @if($role === 'admin')
             <a href="{{ route('categories.index') }}" class="nav-link {{ request()->routeIs('categories.*') ? 'active' : '' }}">
                 <i class="bi bi-tags-fill"></i> Categorías

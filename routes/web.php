@@ -331,6 +331,12 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/billing/{order}/send-email', [\App\Http\Controllers\BillingController::class, 'sendEmail'])->name('billing.sendEmail');
     });
 
+    // Clientes: consulta y registro para los roles operativos
+    Route::middleware(['role:admin,cashier,cashier_waiter,waiter'])->group(function () {
+        Route::get('/clients/search-document', [ClientController::class, 'searchDocument'])->name('clients.searchDocument');
+        Route::resource('clients', ClientController::class);
+    });
+
     // =========================================================
     // ZONA ADMINISTRATIVA (Solo Admin)
     // =========================================================
@@ -360,8 +366,6 @@ Route::middleware(['auth'])->group(function () {
 
         // Gestión
         Route::get('/cash-registers', [App\Http\Controllers\CashRegisterController::class, 'index'])->name('cash_registers.index');
-        Route::get('/clients/search-document', [ClientController::class, 'searchDocument'])->name('clients.searchDocument');
-        Route::resource('clients', ClientController::class);
         Route::resource('categories', CategoryController::class);
 
         // Productos e Inventario
