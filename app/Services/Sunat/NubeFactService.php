@@ -54,8 +54,10 @@ class NubeFactService
 
             if (isset($response['errors'])) {
                 // Error de validación de NubeFact
-                $order->sunat_status      = 'REJECTED';
-                $order->sunat_code        = $response['codigo'] ?? '400';
+                $isAlreadyRegistered = (int) ($response['codigo'] ?? 0) === 23
+                    || str_contains((string) $response['errors'], 'Este documento ya existe');
+                $order->sunat_status      = $isAlreadyRegistered ? 'PENDING' : 'REJECTED';
+                $order->sunat_code        = $isAlreadyRegistered ? '23' : ($response['codigo'] ?? '400');
                 $order->sunat_description = $response['errors'];
             } elseif (isset($response['aceptada_por_sunat'])) {
                 // Respuesta válida de NubeFact
@@ -97,8 +99,10 @@ class NubeFactService
                 'order_id' => $order->id,
                 'msg'      => $e->getMessage(),
             ]);
-            $order->sunat_status      = 'ERROR';
-            $order->sunat_code        = '500';
+            $isAlreadyRegistered = (int) $e->getCode() === 23
+                || str_contains($e->getMessage(), 'Este documento ya existe');
+            $order->sunat_status      = $isAlreadyRegistered ? 'PENDING' : 'ERROR';
+            $order->sunat_code        = $isAlreadyRegistered ? '23' : '500';
             $order->sunat_description = $e->getMessage();
         }
 
@@ -428,7 +432,7 @@ class NubeFactService
 
         if ($httpCode !== 200) {
             $msg = $data['errors'] ?? ("HTTP {$httpCode}: " . substr($response, 0, 500));
-            throw new Exception("NubeFact respondió con error: {$msg}");
+            throw new Exception("NubeFact respondió con error: {$msg}", (int) ($data['codigo'] ?? 0));
         }
 
         return $data ?? [];

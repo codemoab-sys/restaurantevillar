@@ -186,7 +186,7 @@
                                             </button>
                                         </form>
                                     @endif
-                                    @if(in_array($o->sunat_status, ['PENDING', 'OBSERVED']))
+                                    @if(in_array($o->sunat_status, ['PENDING', 'OBSERVED']) || $o->sunat_code === '23' || str_contains((string) $o->sunat_description, 'Este documento ya existe'))
                                         <form method="POST" action="{{ route('billing.sync', $o) }}" class="d-inline">
                                             @csrf
                                             <button class="btn btn-outline-info" title="Consultar estado en NubeFact"><i class="bi bi-arrow-clockwise"></i></button>

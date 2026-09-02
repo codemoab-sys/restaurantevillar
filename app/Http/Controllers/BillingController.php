@@ -91,6 +91,10 @@ class BillingController extends Controller
             return back()->with('error', 'La orden no tiene serie/correlativo asignados.');
         }
 
+        if ($order->sunat_code === '23' || str_contains((string) $order->sunat_description, 'Este documento ya existe')) {
+            return back()->with('info', 'El documento ya existe en NubeFact. Usa "Consultar estado"; no se volverá a enviar.');
+        }
+
         try {
             (new SunatService())->sendInvoice($order->fresh('details.product'));
             $order->refresh();
