@@ -96,7 +96,7 @@
 
     <div class="row g-3">
         <div class="col-md-7">
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm billing-detail-card">
                 <div class="card-header bg-white"><strong>Detalle del Comprobante</strong></div>
                 <div class="card-body p-0">
                     <div class="table-responsive billing-detail-table-wrap">
@@ -185,7 +185,14 @@
 <style>
     .billing-detail-table {
         width: 100%;
+        max-width: 100%;
         table-layout: fixed;
+    }
+
+    .billing-detail-card,
+    .billing-detail-table-wrap {
+        min-width: 0;
+        max-width: 100%;
     }
 
     .billing-detail-qty { width: 12%; }
@@ -212,7 +219,7 @@
         .billing-detail-table th,
         .billing-detail-table td {
             padding-left: .35rem;
-            padding-right: .35rem;
+            padding-right: .5rem;
         }
 
         .billing-detail-table tfoot th.text-end {
