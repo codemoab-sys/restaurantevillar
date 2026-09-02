@@ -12,7 +12,7 @@ class UserController extends Controller
     public function index()
     {
         // Ordenamos: Primero Admins, luego Cajeros, luego Mozos
-        $users = User::orderByRaw("FIELD(role, 'admin', 'cashier', 'waiter')")->get();
+        $users = User::orderByRaw("FIELD(role, 'admin', 'cashier_waiter', 'cashier', 'waiter', 'kitchen')")->get();
         return view('users.index', compact('users'));
     }
 
@@ -22,7 +22,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:rest_users,email',
             'password' => 'required|min:6',
-            'role' => 'required|in:admin,cashier,waiter,kitchen'
+            'role' => 'required|in:admin,cashier,cashier_waiter,waiter,kitchen'
         ]);
 
         User::create([
@@ -40,7 +40,7 @@ class UserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:rest_users,email,'.$user->id,
-            'role' => 'required|in:admin,cashier,waiter,kitchen'
+            'role' => 'required|in:admin,cashier,cashier_waiter,waiter,kitchen'
         ]);
 
         $data = [

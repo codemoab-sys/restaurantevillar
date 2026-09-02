@@ -31,7 +31,7 @@
                             <tr>
                                 <td class="ps-4">
                                     <div class="d-flex align-items-center">
-                                        <div class="avatar-circle me-3 {{ $user->role == 'admin' ? 'bg-danger' : ($user->role == 'cashier' ? 'bg-primary' : 'bg-success') }}">
+                                        <div class="avatar-circle me-3 {{ $user->role == 'admin' ? 'bg-danger' : (in_array($user->role, ['cashier', 'cashier_waiter']) ? 'bg-primary' : 'bg-success') }}">
                                             {{ substr($user->name, 0, 1) }}
                                         </div>
                                         <div>
@@ -47,6 +47,8 @@
                                         <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-3 py-2">Administrador</span>
                                     @elseif($user->role == 'cashier')
                                         <span class="badge bg-primary bg-opacity-10 text-primary border border-primary px-3 py-2">Cajero</span>
+                                    @elseif($user->role == 'cashier_waiter')
+                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary px-3 py-2">Cajero / Mozo</span>
                                     @else
                                         <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 py-2">Mozo / Staff</span>
                                     @endif
@@ -103,6 +105,7 @@
                         <select name="role" class="form-select">
                             <option value="waiter">Mozo (Solo Pedidos)</option>
                             <option value="cashier">Cajero (Cobros y Gastos)</option>
+                            <option value="cashier_waiter">Cajero / Mozo (Pedidos y Cobros)</option>
                             <option value="kitchen">Cocina (KDS)</option>
                             <option value="admin">Administrador (Total)</option>
                         </select>
@@ -144,6 +147,7 @@
                         <select name="role" id="edit_role" class="form-select">
                             <option value="waiter">Mozo</option>
                             <option value="cashier">Cajero</option>
+                            <option value="cashier_waiter">Cajero / Mozo</option>
                             <option value="kitchen">Cocina</option>
                             <option value="admin">Administrador</option>
                         </select>

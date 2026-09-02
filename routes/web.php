@@ -283,7 +283,7 @@ Route::middleware(['auth'])->group(function () {
     // =========================================================
     // ZONA FINANCIERA (Cajeros y Admins)
     // =========================================================
-    Route::middleware(['role:admin,cashier'])->group(function () {
+    Route::middleware(['role:admin,cashier,cashier_waiter'])->group(function () {
         // Cobro Final
         Route::post('/pos/order/{order}/checkout', [PosController::class, 'checkout'])->name('pos.checkout');
 
@@ -312,11 +312,9 @@ Route::middleware(['auth'])->group(function () {
 
 
     // =========================================================
-    // ZONA ADMINISTRATIVA (Solo Admin)
+    // COMPROBANTES: Admin, Cajero y Cajero/Mozo
     // =========================================================
-    Route::middleware(['role:admin'])->group(function () {
-
-        // ── FACTURACIÓN ELECTRÓNICA (SUNAT) ──────────────────
+    Route::middleware(['role:admin,cashier,cashier_waiter'])->group(function () {
         Route::get('/billing',                    [BillingController::class, 'index'])->name('billing.index');
         Route::get('/billing/{order}',            [BillingController::class, 'show'])->name('billing.show');
         Route::post('/billing/{order}/retry',     [BillingController::class, 'retry'])->name('billing.retry');
@@ -331,6 +329,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/billing/{order}/pdf',        [\App\Http\Controllers\BillingPdfController::class, 'show'])->name('billing.pdf');
         Route::get('/billing/{order}/ticket',     [\App\Http\Controllers\BillingPdfController::class, 'ticket'])->name('billing.pdf.ticket');
         Route::post('/billing/{order}/send-email', [\App\Http\Controllers\BillingController::class, 'sendEmail'])->name('billing.sendEmail');
+    });
+
+    // =========================================================
+    // ZONA ADMINISTRATIVA (Solo Admin)
+    // =========================================================
+    Route::middleware(['role:admin'])->group(function () {
 
         // Notas de Crédito
         Route::get('/credit-notes',                       [\App\Http\Controllers\CreditNoteController::class, 'index'])->name('credit_notes.index');

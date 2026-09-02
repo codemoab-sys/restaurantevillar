@@ -16,7 +16,7 @@ class RequireOpenCashRegister
         $user = $request->user();
 
         // Si el usuario es admin o cajero, exigimos caja abierta para ciertas rutas
-        if ($user && in_array($user->role, ['admin', 'cashier'])) {
+        if ($user && in_array($user->role, ['admin', 'cashier', 'cashier_waiter'])) {
             if (!$user->activeCashRegister) {
                 return redirect()->route('cash_registers.create')
                     ->with('warning', 'Debes abrir tu turno de caja antes de realizar operaciones de cobro o venta.');

@@ -719,7 +719,7 @@
     <div class="sidebar-menu">
         @php $role = Auth::user()->role; @endphp
 
-        @if(in_array($role, ['admin', 'cashier']))
+        @if(in_array($role, ['admin', 'cashier', 'cashier_waiter']))
             <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
                 <i class="bi bi-grid-1x2-fill"></i> Dashboard
             </a>
@@ -735,7 +735,7 @@
         <a href="{{ route('pos.index') }}" class="nav-link {{ request()->routeIs('pos.*') ? 'active' : '' }}">
             <i class="bi bi-bag-check-fill"></i> Punto de Venta
         </a>
-        @if(in_array($role, ['admin', 'cashier']))
+        @if(in_array($role, ['admin', 'cashier', 'cashier_waiter']))
             <a href="{{ route('delivery.index') }}" class="nav-link {{ request()->routeIs('delivery.*') ? 'active' : '' }}">
                 <i class="bi bi-bicycle"></i> Delivery
             </a>
@@ -743,15 +743,17 @@
         <a href="{{ route('reservations.index') }}" class="nav-link {{ request()->routeIs('reservations.*') ? 'active' : '' }}">
             <i class="bi bi-calendar-event-fill"></i> Reservas
         </a>
-        @if(in_array($role, ['admin', 'cashier']))
+        @if(in_array($role, ['admin', 'cashier', 'cashier_waiter']))
             <a href="{{ route('sales.index') }}" class="nav-link {{ request()->routeIs('sales.*') ? 'active' : '' }}">
                 <i class="bi bi-receipt"></i> Historial de Ventas
             </a>
-            @if($role === 'admin')
+            @if(in_array($role, ['admin', 'cashier', 'cashier_waiter']))
                 <div class="menu-category" style="margin-top:12px;">Facturación Electrónica</div>
                 <a href="{{ route('billing.index') }}" class="nav-link {{ request()->routeIs('billing.*') ? 'active' : '' }}">
                     <i class="bi bi-receipt-cutoff"></i> Comprobantes
                 </a>
+            @endif
+            @if($role === 'admin')
                 <a href="{{ route('credit_notes.index') }}" class="nav-link {{ request()->routeIs('credit_notes.*') ? 'active' : '' }}">
                     <i class="bi bi-arrow-counterclockwise"></i> Notas de Crédito
                 </a>
