@@ -391,7 +391,7 @@ class PosController extends Controller
         $clientId = $request->input('client_id');
         $client = $clientId ? Client::findOrFail($clientId) : null;
         $clientName = $client?->name ?: ($request->input('client_name') ?? 'Público');
-        $documentType = $request->input('document_type', 'Ticket');
+        $documentType = $request->input('document_type');
         $clientDocument = $client?->document_number ?: $request->input('client_document');
 
         if (in_array($documentType, ['Boleta', 'Factura'], true)) {
