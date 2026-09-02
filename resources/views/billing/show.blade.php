@@ -99,7 +99,14 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white"><strong>Detalle del Comprobante</strong></div>
                 <div class="card-body p-0">
-                    <table class="table table-sm mb-0">
+                    <div class="table-responsive billing-detail-table-wrap">
+                    <table class="table table-sm mb-0 billing-detail-table">
+                        <colgroup>
+                            <col class="billing-detail-qty">
+                            <col class="billing-detail-product">
+                            <col class="billing-detail-price">
+                            <col class="billing-detail-subtotal">
+                        </colgroup>
                         <thead class="table-light">
                             <tr>
                                 <th>Cant</th><th>Producto</th>
@@ -128,6 +135,7 @@
                             </tr>
                         </tfoot>
                     </table>
+                    </div>
                 </div>
             </div>
 
@@ -173,6 +181,46 @@
         </div>
     </div>
 </div>
+
+<style>
+    .billing-detail-table {
+        width: 100%;
+        table-layout: fixed;
+    }
+
+    .billing-detail-qty { width: 12%; }
+    .billing-detail-product { width: 42%; }
+    .billing-detail-price,
+    .billing-detail-subtotal { width: 23%; }
+
+    .billing-detail-table th,
+    .billing-detail-table td {
+        overflow-wrap: anywhere;
+        vertical-align: middle;
+    }
+
+    .billing-detail-table td.text-end,
+    .billing-detail-table th.text-end {
+        white-space: nowrap;
+    }
+
+    @media (max-width: 576px) {
+        .billing-detail-table {
+            font-size: .82rem;
+        }
+
+        .billing-detail-table th,
+        .billing-detail-table td {
+            padding-left: .35rem;
+            padding-right: .35rem;
+        }
+
+        .billing-detail-table tfoot th.text-end {
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+    }
+</style>
 
 {{-- Modal Enviar PDF --}}
 @if($order->pdf_path)
