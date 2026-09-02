@@ -107,6 +107,22 @@ class BillingController extends Controller
         return back()->with($order->sunat_status === 'ACCEPTED' ? 'success' : 'error', $msg);
     }
 
+    public function syncStatus(Order $order)
+    {
+        abort_unless(in_array($order->document_type, ['Boleta', 'Factura']), 404);
+
+        try {
+            $order = (new NubeFactService())->syncOrderStatusFromQuery($order);
+            return back()->with(
+                $order->sunat_status === 'ACCEPTED' ? 'success' : 'info',
+                "Estado actualizado: {$order->sunat_status}. " . ($order->sunat_description ?? '')
+            );
+        } catch (\Throwable $e) {
+            Log::error('Consulta de comprobante NubeFact falló', ['order_id' => $order->id, 'msg' => $e->getMessage()]);
+            return back()->with('error', 'No se pudo consultar el comprobante: ' . $e->getMessage());
+        }
+    }
+
     /**
      * Solicita a NubeFact la anulación de una factura o boleta.
      */

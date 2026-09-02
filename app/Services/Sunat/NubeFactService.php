@@ -65,8 +65,11 @@ class NubeFactService
                 if ($response['aceptada_por_sunat'] === true) {
                     $order->sunat_status = 'ACCEPTED';
                 } else {
-                    $order->sunat_status = 'OBSERVED';
-                    $order->sunat_description = $response['sunat_description'] ?? 'Observada por SUNAT';
+                    $order->sunat_status = !empty($response['sunat_ticket_numero']) || empty($response['sunat_responsecode'])
+                        ? 'PENDING'
+                        : 'OBSERVED';
+                    $order->sunat_description = $response['sunat_description']
+                        ?? ($order->sunat_status === 'PENDING' ? 'Pendiente de generación en NubeFact' : 'Observada por SUNAT');
                 }
 
                 // Guardar enlace del PDF/XML/CDR si existen
@@ -328,7 +331,9 @@ class NubeFactService
             if ((bool) $response['aceptada_por_sunat'] === true) {
                 $order->sunat_status = 'ACCEPTED';
             } else {
-                $order->sunat_status = 'OBSERVED';
+                $order->sunat_status = !empty($response['sunat_ticket_numero']) || empty($response['sunat_responsecode'])
+                    ? 'PENDING'
+                    : 'OBSERVED';
             }
         }
 

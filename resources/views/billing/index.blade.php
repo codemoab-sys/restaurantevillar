@@ -186,6 +186,12 @@
                                             </button>
                                         </form>
                                     @endif
+                                    @if(in_array($o->sunat_status, ['PENDING', 'OBSERVED']))
+                                        <form method="POST" action="{{ route('billing.sync', $o) }}" class="d-inline">
+                                            @csrf
+                                            <button class="btn btn-outline-info" title="Consultar estado en NubeFact"><i class="bi bi-arrow-clockwise"></i></button>
+                                        </form>
+                                    @endif
                                     @if($o->sunat_status === 'ACCEPTED' && $o->anulacion_status !== 'ACCEPTED')
                                         <button class="btn btn-outline-danger" title="Anular" data-bs-toggle="modal" data-bs-target="#cancelModal-{{ $o->id }}">
                                             <i class="bi bi-x-circle"></i>
