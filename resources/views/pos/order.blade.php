@@ -892,9 +892,15 @@ foreach($categories as $cat) {
                     icon: 'success',
                     title: '¡Venta registrada!',
                     text: data.message || 'El pago se procesó correctamente.',
+                    showDenyButton: Boolean(data.print_url),
+                    denyButtonText: '<i class="bi bi-printer me-1"></i> Imprimir',
+                    denyButtonColor: '#212529',
                     confirmButtonText: 'Aceptar',
                     allowOutsideClick: false
-                }).then(() => {
+                }).then((result) => {
+                    if (result.isDenied && data.print_url) {
+                        window.open(data.print_url, '_blank', 'noopener');
+                    }
                     window.location.href = data.redirect;
                 });
             })

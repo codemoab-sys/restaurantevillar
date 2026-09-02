@@ -560,6 +560,9 @@ class PosController extends Controller
                 'success' => true,
                 'message' => $msg,
                 'order_id' => $order->id,
+                'print_url' => $order->isElectronic()
+                    ? route('billing.pdf.ticket', $order->id)
+                    : route('sales.ticket', $order->id),
                 'redirect' => route('pos.index'),
             ]);
         }
