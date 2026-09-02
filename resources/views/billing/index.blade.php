@@ -64,11 +64,11 @@
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small mb-1">Desde</label>
-                    <input type="date" name="from" value="{{ request('from') }}" class="form-control form-control-sm">
+                    <input type="date" name="from" value="{{ $from }}" class="form-control form-control-sm">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small mb-1">Hasta</label>
-                    <input type="date" name="to" value="{{ request('to') }}" class="form-control form-control-sm">
+                    <input type="date" name="to" value="{{ $to }}" class="form-control form-control-sm">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small mb-1">Buscar</label>

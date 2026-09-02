@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
+use Carbon\Carbon;
 
 /**
  * Módulo de Comprobantes Electrónicos (SUNAT - Perú).
@@ -30,6 +31,9 @@ class BillingController extends Controller
      */
     public function index(Request $request)
     {
+        $from = $request->input('from') ?: Carbon::now()->startOfMonth()->format('Y-m-d');
+        $to = $request->input('to') ?: Carbon::now()->endOfMonth()->format('Y-m-d');
+
         $query = Order::with('user')
             ->whereIn('document_type', ['Boleta', 'Factura'])
             ->whereNotNull('serie')
@@ -42,12 +46,8 @@ class BillingController extends Controller
         if ($t = $request->input('type')) {
             $query->where('document_type', $t);
         }
-        if ($from = $request->input('from')) {
-            $query->whereDate(DB::raw('COALESCE(issued_at, created_at)'), '>=', $from);
-        }
-        if ($to = $request->input('to')) {
-            $query->whereDate(DB::raw('COALESCE(issued_at, created_at)'), '<=', $to);
-        }
+        $query->whereDate(DB::raw('COALESCE(issued_at, created_at)'), '>=', $from)
+            ->whereDate(DB::raw('COALESCE(issued_at, created_at)'), '<=', $to);
         if ($q = $request->input('q')) {
             $query->where(function ($qq) use ($q) {
                 $qq->where('serie', 'like', "%{$q}%")
@@ -66,7 +66,7 @@ class BillingController extends Controller
             ->pluck('total', 'sunat_status')
             ->toArray();
 
-        return view('billing.index', compact('orders', 'stats'));
+        return view('billing.index', compact('orders', 'stats', 'from', 'to'));
     }
 
     /**
