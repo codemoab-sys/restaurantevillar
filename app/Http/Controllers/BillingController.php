@@ -122,7 +122,7 @@ class BillingController extends Controller
                 $order->serie,
                 (int) $order->correlativo
             );
-            $order = $service->syncOrderStatusFromQuery($order);
+            $order = $service->syncOrderStatusFromResponse($order, $response);
 
             if ($request->expectsJson()) {
                 return response()->json([

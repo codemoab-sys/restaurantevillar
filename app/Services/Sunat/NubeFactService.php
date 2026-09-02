@@ -327,6 +327,12 @@ class NubeFactService
             (int) $order->correlativo
         );
 
+        return $this->syncOrderStatusFromResponse($order, $response);
+    }
+
+    public function syncOrderStatusFromResponse(Order $order, array $response): Order
+    {
+
         $order->sent_at = $order->sent_at ?? now();
         $order->sunat_code = $response['sunat_responsecode'] ?? $response['codigo'] ?? $order->sunat_code;
         $order->sunat_description = $response['sunat_description'] ?? $response['errors'] ?? $order->sunat_description;
